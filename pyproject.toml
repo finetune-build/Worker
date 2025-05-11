@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finetune-worker"
+version = "0.0.1"
+authors = [
+  { name = "Peter Pak", email = "ppak10@gmail.com" },
+]
+description = "Python worker client for communicating with finetune.build's API"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+
+dependencies = []  # Add runtime dependencies here
+
+[project.urls]
+Homepage = "https://github.com/finetune-build/Worker"
+Issues = "https://github.com/finetune-build/Worker/issues"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+include = [
+  "src/**/*",
+  "README.md",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/**/*",
+  "README.md",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
