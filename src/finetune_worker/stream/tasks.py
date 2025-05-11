@@ -5,11 +5,11 @@ from typing import get_type_hints, Any
 from celery.app.task import Task
 
 # Import your tasks module
-tools_module = importlib.import_module("app.tools")
+tasks_module = importlib.import_module("finetune_worker.celery.tasks")
 
 # Collect all Celery tasks
 celery_tasks = {
-    name: obj for name, obj in vars(tools_module).items() if isinstance(obj, Task)
+    name: obj for name, obj in vars(tasks_module).items() if isinstance(obj, Task)
 }
 
 

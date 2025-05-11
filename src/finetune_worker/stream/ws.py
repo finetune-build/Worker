@@ -3,21 +3,12 @@ import json
 import ssl
 import os
 
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
-
-# Load model and tokenizer
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-model = GPT2LMHeadModel.from_pretrained("gpt2")
-model.eval()
-
-# Function to generate text
-def generate_response(prompt):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = model.generate(**inputs, max_new_tokens=50, do_sample=True)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+HOST = os.environ.get("FINETUNE_HOST", "api.finetune.build")
+WORKER_ID = os.environ.get("FINETUNE_WORKER_ID")
+WORKER_TOKEN = os.environ.get("FINETUNE_WORKER_TOKEN")
 
 async def open_websocket_connection(worker_instance_id, worker_token):
-    uri = f"wss://{os.environ.get('DJANGO_HOST')}/ws/worker/{worker_instance_id}/machine/"
+    uri = f"wss://{HOST}/ws/worker/{worker_instance_id}/machine/"
     headers = {"Authorization": f"Worker {worker_token}"}
 
     ssl_context = ssl.create_default_context()
@@ -242,7 +233,7 @@ def run_conversation(conversation_id, content=None, shutdown_event=None):
     asyncio.run(open_conversation_websocket(conversation_id, content, shutdown_event))
 
 async def open_conversation_websocket(conversation_id, content=None, shutdown_event=None):
-    uri = f"wss://{os.environ.get('DJANGO_HOST')}/ws/conversation/{conversation_id}/machine/"
+    uri = f"wss://{HOST}/ws/conversation/{conversation_id}/machine/"
     headers = {
         "Authorization": f"Worker {os.environ.get('WORKER_TOKEN')}",
         "X-Worker-ID": os.environ.get("WORKER_ID"),
@@ -258,7 +249,8 @@ async def open_conversation_websocket(conversation_id, content=None, shutdown_ev
 
             async def respond_to_prompt(content):
                 print(f"Responding to prompt: {content}")
-                response = generate_response(content)
+                # response = generate_response(content)
+                response = f"response to: {content}"
                 message = {"type": "prompt_response", "content": response}
                 await websocket.send(json.dumps(message))
 

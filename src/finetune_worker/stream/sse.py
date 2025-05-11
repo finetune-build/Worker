@@ -4,22 +4,25 @@ import json
 import os
 
 # Applies prepended print statement.
-from app.client.stream.tasks import run_task_by_name
-from app.client.stream.utils import *
-from app.client.stream.ws import open_websocket_connection, start_conversation_thread, shutdown_conversation_thread
+from finetune_worker.stream.tasks import run_task_by_name
+from finetune_worker.stream.utils import *
+from finetune_worker.stream.ws import open_websocket_connection, start_conversation_thread, shutdown_conversation_thread
 
+HOST = os.environ.get("FINETUNE_HOST", "api.finetune.build")
+WORKER_ID = os.environ.get("FINETUNE_WORKER_ID")
+WORKER_TOKEN = os.environ.get("FINETUNE_WORKER_TOKEN")
 
-async def respond_to_ping(worker_instance_id, worker_token):
-    url = f"https://{os.environ.get('DJANGO_HOST')}/v1/worker/{worker_instance_id}/pong/"
+async def respond_to_ping():
+    url = f"https://{HOST}/v1/worker/{WORKER_ID}/pong/"
     headers = {
-        "Authorization": f"Worker {worker_token}",
+        "Authorization": f"Worker {WORKER_TOKEN}",
         "Content-Type": "application/json",
     }
 
     async with aiohttp.ClientSession(headers=headers) as session:
         try:
             async with session.post(
-                url, ssl=False, json={"worker_instance_id": worker_instance_id}
+                url, ssl=False, json={"worker_id": WORKER_ID}
             ) as resp:
                 if resp.status != 200:
                     print(f"Failed to respond to ping. Status: {resp.status}")
@@ -27,14 +30,14 @@ async def respond_to_ping(worker_instance_id, worker_token):
             print(f"Ping response error: {e}")
 
 
-async def listen_for_events(worker_instance_id, worker_token):
-    url = f"https://{os.environ.get('DJANGO_HOST')}/v1/worker/{worker_instance_id}/sse/"
-    headers = {"Authorization": f"Worker {worker_token}"}
+async def listen_for_events():
+    url = f"https://{HOST}/v1/worker/{WORKER_ID}/sse/"
+    headers = {"Authorization": f"Worker {WORKER_TOKEN}"}
 
     timeout = aiohttp.ClientTimeout(sock_read=None)  # Disable read timeout
     async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
         async with session.get(url, ssl=False) as response:
-            print(f"Connected as {worker_instance_id}, status: {response.status}")
+            print(f"Connected as {WORKER_ID}, status: {response.status}")
 
             if response.status != 200:
                 error_details = await response.text()
@@ -49,7 +52,7 @@ async def listen_for_events(worker_instance_id, worker_token):
                         data = json.loads(message)
                         if data.get("type") == "ping":
                             print(f"Ping received. Sending pong...")
-                            await respond_to_ping(worker_instance_id, worker_token)
+                            await respond_to_ping()
 
                         elif data.get("type") == "tool":
                             tool_name = data.get("tool_name")
@@ -58,7 +61,7 @@ async def listen_for_events(worker_instance_id, worker_token):
 
                         elif data.get("type") == "websocket_open":
                             print("Opening WebSocket connection...")
-                            await open_websocket_connection(worker_instance_id, worker_token)
+                            await open_websocket_connection()
 
                         elif data.get("type") == "open_conversation_websocket":
                             content = data["data"]["content"]
@@ -82,13 +85,13 @@ async def listen_for_events(worker_instance_id, worker_token):
                     print(f"Heartbeat")
 
 
-async def start_worker(worker_instance_id, worker_token):
+async def start_worker():
     retry_delay = 1  # Start with 1 second
     max_delay = 60  # Cap the backoff
 
     while True:
         try:
-            await listen_for_events(worker_instance_id, worker_token)
+            await listen_for_events()
             print(f"Disconnected from event stream. Retrying in {retry_delay}s...")
         except aiohttp.ClientResponseError as e:
             print(f"HTTP error occurred: {e.status} - {e.message}")
@@ -100,7 +103,4 @@ async def start_worker(worker_instance_id, worker_token):
 
 
 if __name__ == "__main__":
-    worker_instance_id = os.environ.get("WORKER_ID")
-    worker_token = os.environ.get("WORKER_TOKEN")
-    # worker_token = ""
-    asyncio.run(start_worker(worker_instance_id, worker_token))
+    asyncio.run(start_worker())

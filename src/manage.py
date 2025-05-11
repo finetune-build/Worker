@@ -1,3 +1,4 @@
+import os
 import subprocess
 import time
 import sys
@@ -28,13 +29,13 @@ class RestartOnChangeHandler(FileSystemEventHandler):
 
 def start_worker_subprocess():
     return subprocess.Popen(
-        [sys.executable, "-m", "app.client.stream.sse"],
+        [sys.executable, "-m", "finetune_worker.stream.sse"]
     )
 
 
 def start_celery_worker():
     return subprocess.Popen(
-        ["celery", "-A", "app.client.celery.app.celery", "worker", "--loglevel=info"]
+        ["celery", "-A", "finetune_worker.celery.app.celery", "worker", "--loglevel=info"]
     )
 
 

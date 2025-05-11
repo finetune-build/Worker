@@ -16,7 +16,10 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
-dependencies = []  # Add runtime dependencies here
+dependencies = ["aiohttp", "celery", "python-dotenv", "sqlalchemy", "watchdog", "websockets"]
+
+[project.scripts]
+finetune-worker = "manage:main"
 
 [project.urls]
 Homepage = "https://github.com/finetune-build/Worker"
