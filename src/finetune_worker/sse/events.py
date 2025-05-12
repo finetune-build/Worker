@@ -1,12 +1,11 @@
 import aiohttp
-import asyncio
 import json
 import os
 
 # Applies prepended print statement.
 from finetune_worker.sse.tasks import run_task_by_name
 from finetune_worker.sse.utils import *
-from finetune_worker.ws import open_websocket_connection, start_conversation_thread, shutdown_conversation_thread
+from finetune_worker.ws.messages import open_websocket_connection, start_conversation_thread, shutdown_conversation_thread
 
 HOST = os.environ.get("FINETUNE_HOST", "api.finetune.build")
 WORKER_ID = os.environ.get("FINETUNE_WORKER_ID")
@@ -83,24 +82,3 @@ async def listen_for_events():
                         print(f"Received non-JSON message: {message}")
                 elif decoded.startswith(":"):
                     print(f"Heartbeat")
-
-
-async def start_worker():
-    retry_delay = 1  # Start with 1 second
-    max_delay = 60  # Cap the backoff
-
-    while True:
-        try:
-            await listen_for_events()
-            print(f"Disconnected from event stream. Retrying in {retry_delay}s...")
-        except aiohttp.ClientResponseError as e:
-            print(f"HTTP error occurred: {e.status} - {e.message}")
-        except Exception as e:
-            print(f"An unexpected error occurred: {str(e)}")
-
-        await asyncio.sleep(retry_delay)
-        retry_delay = min(retry_delay * 2, max_delay)  # Exponential backoff
-
-
-if __name__ == "__main__":
-    asyncio.run(start_worker())

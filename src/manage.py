@@ -5,7 +5,8 @@ import sys
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-WATCH_PATHS = ["app/"]
+
+WATCH_PATHS = ["./"]
 IGNORED_DIRS = ["__pycache__", "venv", "tests", "migrations"]
 
 
@@ -29,7 +30,7 @@ class RestartOnChangeHandler(FileSystemEventHandler):
 
 def start_worker_subprocess():
     return subprocess.Popen(
-        [sys.executable, "-m", "finetune_worker.stream.sse"]
+        [sys.executable, "-m", "finetune_worker.sse.run"]
     )
 
 

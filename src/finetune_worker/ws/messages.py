@@ -5,6 +5,8 @@ import ssl
 import threading
 import websockets
 
+from finetune_worker.agent.registry import AGENT_REGISTRY
+
 HOST = os.environ.get("FINETUNE_HOST", "api.finetune.build")
 WORKER_ID = os.environ.get("FINETUNE_WORKER_ID")
 WORKER_TOKEN = os.environ.get("FINETUNE_WORKER_TOKEN")
@@ -120,7 +122,8 @@ async def open_conversation_websocket(conversation_id, content=None, shutdown_ev
             async def respond_to_prompt(content):
                 print(f"Responding to prompt: {content}")
                 # response = generate_response(content)
-                response = f"response to: {content}"
+                # response = f"response to: {content}"
+                response = AGENT_REGISTRY["generate_text"](content)
                 message = {"type": "prompt_response", "content": response}
                 await websocket.send(json.dumps(message))
 
