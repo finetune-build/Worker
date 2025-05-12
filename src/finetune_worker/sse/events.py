@@ -4,9 +4,9 @@ import json
 import os
 
 # Applies prepended print statement.
-from finetune_worker.stream.tasks import run_task_by_name
-from finetune_worker.stream.utils import *
-from finetune_worker.stream.ws import open_websocket_connection, start_conversation_thread, shutdown_conversation_thread
+from finetune_worker.sse.tasks import run_task_by_name
+from finetune_worker.sse.utils import *
+from finetune_worker.ws import open_websocket_connection, start_conversation_thread, shutdown_conversation_thread
 
 HOST = os.environ.get("FINETUNE_HOST", "api.finetune.build")
 WORKER_ID = os.environ.get("FINETUNE_WORKER_ID")
