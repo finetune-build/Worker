@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finetune-worker"
-version = "0.0.1"
+dynamic = ["version"]
 authors = [
   { name = "Peter Pak", email = "ppak10@gmail.com" },
 ]
@@ -39,6 +39,9 @@ include = [
   "src/**/*",
   "README.md",
 ]
+
+[tool.hatch.version]
+path = "src/finetune_worker/__init__.py"  # or another version file
 
 [tool.black]
 line-length = 88
