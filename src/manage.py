@@ -6,7 +6,8 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 
-WATCH_PATHS = ["./"]
+# WATCH_PATHS = ["./"]
+WATCH_PATHS = []
 IGNORED_DIRS = ["__pycache__", "venv", "tests", "migrations"]
 
 

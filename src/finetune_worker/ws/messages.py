@@ -107,8 +107,8 @@ def run_conversation(conversation_id, content=None, shutdown_event=None):
 async def open_conversation_websocket(conversation_id, content=None, shutdown_event=None):
     uri = f"wss://{HOST}/ws/conversation/{conversation_id}/machine/"
     headers = {
-        "Authorization": f"Worker {os.environ.get('WORKER_TOKEN')}",
-        "X-Worker-ID": os.environ.get("WORKER_ID"),
+        "Authorization": f"Worker {os.environ.get('FINETUNE_WORKER_TOKEN')}",
+        "X-Worker-ID": os.environ.get("FINETUNE_WORKER_ID"),
     }
 
     ssl_context = ssl.create_default_context()
