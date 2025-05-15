@@ -1,52 +1,14 @@
 import asyncio
 import json
-import os
 import ssl
 import threading
 import websockets
 
-from finetune_worker.agent.registry import AGENT_REGISTRY
-
-HOST = os.environ.get("FINETUNE_HOST", "api.finetune.build")
-WORKER_ID = os.environ.get("FINETUNE_WORKER_ID")
-WORKER_TOKEN = os.environ.get("FINETUNE_WORKER_TOKEN")
-
-async def open_websocket_connection(worker_instance_id, worker_token):
-    uri = f"wss://{HOST}/ws/worker/{worker_instance_id}/machine/"
-    headers = {"Authorization": f"Worker {worker_token}"}
-
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-
-    async with websockets.connect(
-        uri, additional_headers=headers, ssl=ssl_context
-    ) as websocket:
-        print(f"WebSocket connection established for {worker_instance_id}")
-
-        async def respond_to_ping():
-            pong_message = {"type": "pong", "status": "ok"}
-            await websocket.send(json.dumps(pong_message))
-
-        while True:
-            try:
-                message = await websocket.recv()
-                print(f"WebSocket message received: {message}")
-
-                data = json.loads(message)
-                if data.get("type") == "ping":
-                    print(f"Ping received via WebSocket. Sending pong...")
-                    await respond_to_ping()
-
-                else:
-                    print(f"Received WebSocket message: {data}")
-
-            except websockets.ConnectionClosed:
-                print("WebSocket connection closed. Reconnecting...")
-                break
+from ftw.agent.registry import AGENT_REGISTRY
+from ftw.conf import settings
 
 # Global dictionary to track active threads by conversation_id
-active_threads = {}
+conversation_threads = {}
 
 # Thread-safe lock to manage active_threads dictionary
 thread_lock = threading.Lock()
@@ -63,10 +25,10 @@ def start_conversation_thread(conversation_id, content=None):
     Starts a new thread for the conversation or joins an existing one.
     """
     with thread_lock:
-        if conversation_id in active_threads:
+        if conversation_id in conversation_threads:
             print(f"Conversation {conversation_id} already active. Joining existing thread.")
             # The thread is already running, return the existing thread
-            return active_threads[conversation_id]
+            return conversation_threads[conversation_id]
         else:
             print(f"Starting a new thread for conversation {conversation_id}.")
             # Create a shutdown event for the conversation ID
@@ -77,7 +39,7 @@ def start_conversation_thread(conversation_id, content=None):
             new_thread = threading.Thread(target=run_conversation, args=(conversation_id, content, shutdown_event))
             new_thread.start()
             
-            active_threads[conversation_id] = new_thread
+            conversation_threads[conversation_id] = new_thread
             return new_thread
 
 def shutdown_conversation_thread(conversation_id):
@@ -91,13 +53,6 @@ def shutdown_conversation_thread(conversation_id):
         else:
             print(f"No active thread found for conversation {conversation_id}.")
 
-def run_conversation(conversation_id, content=None):
-    """
-    The function to handle the WebSocket connection and conversation for a specific conversation_id.
-    """
-    # This will be the main function for handling WebSocket communication for a specific conversation
-    asyncio.run(open_conversation_websocket(conversation_id, content))
-
 def run_conversation(conversation_id, content=None, shutdown_event=None):
     """
     The function to handle the WebSocket connection and conversation for a specific conversation_id.
@@ -105,10 +60,10 @@ def run_conversation(conversation_id, content=None, shutdown_event=None):
     asyncio.run(open_conversation_websocket(conversation_id, content, shutdown_event))
 
 async def open_conversation_websocket(conversation_id, content=None, shutdown_event=None):
-    uri = f"wss://{HOST}/ws/conversation/{conversation_id}/machine/"
+    uri = f"wss://{settings.HOST}/ws/conversation/{conversation_id}/machine/"
     headers = {
-        "Authorization": f"Worker {os.environ.get('FINETUNE_WORKER_TOKEN')}",
-        "X-Worker-ID": os.environ.get("FINETUNE_WORKER_ID"),
+        "Authorization": f"Worker {settings.WORKER_TOKEN}",
+        "X-Worker-ID": settings.WORKER_ID,
     }
 
     ssl_context = ssl.create_default_context()
@@ -161,8 +116,8 @@ async def open_conversation_websocket(conversation_id, content=None, shutdown_ev
 
     finally:
         with thread_lock:
-            if conversation_id in active_threads:
-                del active_threads[conversation_id]
+            if conversation_id in conversation_threads:
+                del conversation_threads[conversation_id]
             print(f"Cleaned up conversation thread {conversation_id}.")
 
         print("WebSocket conversation cleanup complete.")

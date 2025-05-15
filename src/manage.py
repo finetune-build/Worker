@@ -1,7 +1,7 @@
-import os
 import subprocess
 import time
 import sys
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -31,13 +31,13 @@ class RestartOnChangeHandler(FileSystemEventHandler):
 
 def start_worker_subprocess():
     return subprocess.Popen(
-        [sys.executable, "-m", "finetune_worker.sse.run"]
+        [sys.executable, "-m", "ftw.sse.run"]
     )
 
 
 def start_celery_worker():
     return subprocess.Popen(
-        ["celery", "-A", "finetune_worker.celery.app.celery", "worker", "--loglevel=info"]
+        ["celery", "-A", "ftw.celery.app.celery", "worker", "--loglevel=info"]
     )
 
 

@@ -1,27 +1,26 @@
 import aiohttp
 import json
-import os
 
 # Applies prepended print statement.
-from finetune_worker.sse.tasks import run_task_by_name
-from finetune_worker.sse.utils import *
-from finetune_worker.ws.messages import open_websocket_connection, start_conversation_thread, shutdown_conversation_thread
+from ftw.conf import settings
+from ftw.sse.tasks import run_task_by_name
+from ftw.sse.utils import *
+from ftw.ws.conversation import start_conversation_thread, shutdown_conversation_thread
+from ftw.ws.worker import start_worker_thread
 
-HOST = os.environ.get("FINETUNE_HOST", "api.finetune.build")
-WORKER_ID = os.environ.get("FINETUNE_WORKER_ID")
-WORKER_TOKEN = os.environ.get("FINETUNE_WORKER_TOKEN")
+print(settings.HOST)
 
 async def respond_to_ping():
-    url = f"https://{HOST}/v1/worker/{WORKER_ID}/pong/"
+    url = f"https://{settings.HOST}/v1/worker/{settings.WORKER_ID}/pong/"
     headers = {
-        "Authorization": f"Worker {WORKER_TOKEN}",
+        "Authorization": f"Worker {settings.WORKER_TOKEN}",
         "Content-Type": "application/json",
     }
 
     async with aiohttp.ClientSession(headers=headers) as session:
         try:
             async with session.post(
-                url, ssl=False, json={"worker_id": WORKER_ID}
+                url, ssl=False, json={"worker_id": settings.WORKER_ID}
             ) as resp:
                 if resp.status != 200:
                     print(f"Failed to respond to ping. Status: {resp.status}")
@@ -30,13 +29,13 @@ async def respond_to_ping():
 
 
 async def listen_for_events():
-    url = f"https://{HOST}/v1/worker/{WORKER_ID}/sse/"
-    headers = {"Authorization": f"Worker {WORKER_TOKEN}"}
+    url = f"https://{settings.HOST}/v1/worker/{settings.WORKER_ID}/sse/"
+    headers = {"Authorization": f"Worker {settings.WORKER_TOKEN}"}
 
     timeout = aiohttp.ClientTimeout(sock_read=None)  # Disable read timeout
     async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
         async with session.get(url, ssl=False) as response:
-            print(f"Connected as {WORKER_ID}, status: {response.status}")
+            print(f"Connected as {settings.WORKER_ID}, status: {response.status}")
 
             if response.status != 200:
                 error_details = await response.text()
@@ -58,14 +57,14 @@ async def listen_for_events():
                             run_task_by_name(tool_name)
                             print(f"Tool request received. Sending confirmation...")
 
-                        elif data.get("type") == "websocket_open":
-                            print("Opening WebSocket connection...")
-                            await open_websocket_connection()
+                        elif data.get("type") == "open_worker_websocket":
+                            print(f"Starting Worker Websocket Thread: {settings.WORKER_ID}")
+                            start_worker_thread(settings.WORKER_ID)
 
                         elif data.get("type") == "open_conversation_websocket":
                             content = data["data"]["content"]
                             conversation_id = data["data"]["conversation_id"]
-                            print("Opening WebSocket connection for conversation in a thread...")
+                            print(f"Starting Conversation Websocket Thread: {conversation_id}")
                             start_conversation_thread(conversation_id, content)
 
                         # Not sure if necessary to be sent with SSE as this can

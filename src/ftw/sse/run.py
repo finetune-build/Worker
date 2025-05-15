@@ -1,14 +1,14 @@
 import aiohttp
 import asyncio
 
-from finetune_worker.sse.events import listen_for_events
-from finetune_worker.agent.registry import AGENT_REGISTRY, autodiscover_agents
+from ftw.sse.events import listen_for_events
+from ftw.agent.registry import AGENT_REGISTRY, autodiscover_agents
 
 async def start_worker():
-    print("[finetune-worker] Discovering agent functions...")
+    print("Discovering agent functions...")
     discovered = autodiscover_agents()
-    print(f"[finetune-worker] Imported {len(discovered)} modules.")
-    print(f"[finetune-worker] Agents registered: {list(AGENT_REGISTRY.keys())}")
+    print(f"Imported {len(discovered)} modules.")
+    print(f"Agents registered: {list(AGENT_REGISTRY.keys())}")
 
     retry_delay = 1  # Start with 1 second
     max_delay = 60  # Cap the backoff

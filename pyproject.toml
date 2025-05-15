@@ -19,7 +19,7 @@ classifiers = [
 dependencies = ["aiohttp", "celery", "python-dotenv", "sqlalchemy", "watchdog", "websockets"]
 
 [project.scripts]
-finetune-worker = "manage:main"
+ftw = "manage:main"
 
 [project.urls]
 Homepage = "https://github.com/finetune-build/Worker"
@@ -41,7 +41,7 @@ include = [
 ]
 
 [tool.hatch.version]
-path = "src/finetune_worker/__init__.py"  # or another version file
+path = "src/ftw/__init__.py"  # or another version file
 
 [tool.black]
 line-length = 88
