@@ -77,8 +77,8 @@ async def open_worker_websocket(shutdown_event=None):
             async def respond_to_prompt(content):
                 print(f"Responding to prompt: {content}")
                 # response = generate_response(content)
-                # response = f"response to: {content}"
-                response = AGENT_REGISTRY["generate_text"](content)
+                response = f"response to: {content}"
+                # response = AGENT_REGISTRY["generate_text"](content)
                 message = {"type": "prompt_response", "content": response}
                 await websocket.send(json.dumps(message))
 

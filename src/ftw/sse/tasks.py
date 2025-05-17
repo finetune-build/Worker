@@ -42,28 +42,28 @@ def get_task_docstring(task_fn):
 
 
 # Print tasks and their metadata
-print("📋 Discovered Celery tasks and their metadata:\n")
-for name, task in celery_tasks.items():
-    args_info, return_type = get_task_args_and_kwargs(task.run)
-    docstring = get_task_docstring(task.run)
+# print("📋 Discovered Celery tasks and their metadata:\n")
+# for name, task in celery_tasks.items():
+#     args_info, return_type = get_task_args_and_kwargs(task.run)
+#     docstring = get_task_docstring(task.run)
 
-    print(f"🔧 Tool: {name}")
+#     print(f"🔧 Tool: {name}")
 
-    if docstring:
-        print(f"📘 Description: {docstring.strip()}")
+#     if docstring:
+#         print(f"📘 Description: {docstring.strip()}")
 
-    print("📥 Arguments:")
-    for arg in args_info:
-        default_display = (
-            f"default={repr(arg['default'])}" if not arg["required"] else "required"
-        )
-        print(f"  - {arg['name']} ({arg['type']}): {default_display}")
+#     print("📥 Arguments:")
+#     for arg in args_info:
+#         default_display = (
+#             f"default={repr(arg['default'])}" if not arg["required"] else "required"
+#         )
+#         print(f"  - {arg['name']} ({arg['type']}): {default_display}")
 
-    return_display = (
-        getattr(return_type, "__name__", str(return_type)) if return_type else "None"
-    )
-    print(f"📤 Returns: {return_display}")
-    print("-" * 60)
+#     return_display = (
+#         getattr(return_type, "__name__", str(return_type)) if return_type else "None"
+#     )
+#     print(f"📤 Returns: {return_display}")
+#     print("-" * 60)
 
 
 # Function to run a task by name

@@ -77,8 +77,8 @@ async def open_conversation_websocket(conversation_id, content=None, shutdown_ev
             async def respond_to_prompt(content):
                 print(f"Responding to prompt: {content}")
                 # response = generate_response(content)
-                # response = f"response to: {content}"
-                response = AGENT_REGISTRY["generate_text"](content)
+                response = f"response to: {content}"
+                # response = AGENT_REGISTRY["generate_text"](content)
                 message = {"type": "prompt_response", "content": response}
                 await websocket.send(json.dumps(message))
 

@@ -1,14 +1,11 @@
 import aiohttp
 import json
 
-# Applies prepended print statement.
 from ftw.conf import settings
 from ftw.sse.tasks import run_task_by_name
-from ftw.sse.utils import *
+from ftw.sse.utils import * # Applies prepended print statement.
 from ftw.ws.conversation import start_conversation_thread, shutdown_conversation_thread
 from ftw.ws.worker import start_worker_thread
-
-print(settings.HOST)
 
 async def respond_to_ping():
     url = f"https://{settings.HOST}/v1/worker/{settings.WORKER_ID}/pong/"
@@ -27,8 +24,41 @@ async def respond_to_ping():
         except Exception as e:
             print(f"Ping response error: {e}")
 
+async def handle_event(data):
+    """
+    Default events expected from API server.
+    """
+    if data.get("type") == "ping":
+        print(f"Ping received. Sending pong...")
+        await respond_to_ping()
 
-async def listen_for_events():
+    elif data.get("type") == "tool":
+        tool_name = data.get("tool_name")
+        run_task_by_name(tool_name)
+        print(f"Tool request received. Sending confirmation...")
+
+    elif data.get("type") == "open_worker_websocket":
+        print(f"Starting Worker Websocket Thread: {settings.WORKER_ID}")
+        start_worker_thread(settings.WORKER_ID)
+
+    elif data.get("type") == "open_conversation_websocket":
+        content = data["data"]["content"]
+        conversation_id = data["data"]["conversation_id"]
+        print(f"Starting Conversation Websocket Thread: {conversation_id}")
+        start_conversation_thread(conversation_id, content)
+
+    # Not sure if necessary to be sent with SSE as this can
+    # be done inside websocket.
+    # Will keep around just in case.
+    elif data.get("type") == "close_conversation_websocket":
+        conversation_id = data["data"]["conversation_id"]
+        print("Closing WebSocket connection for conversation in a thread...")
+        shutdown_conversation_thread(conversation_id)
+
+    else:
+        print(f"Received message: {data}")
+
+async def listen_for_events(on_event):
     url = f"https://{settings.HOST}/v1/worker/{settings.WORKER_ID}/sse/"
     headers = {"Authorization": f"Worker {settings.WORKER_TOKEN}"}
 
@@ -48,35 +78,7 @@ async def listen_for_events():
                     message = decoded[5:].strip()
                     try:
                         data = json.loads(message)
-                        if data.get("type") == "ping":
-                            print(f"Ping received. Sending pong...")
-                            await respond_to_ping()
-
-                        elif data.get("type") == "tool":
-                            tool_name = data.get("tool_name")
-                            run_task_by_name(tool_name)
-                            print(f"Tool request received. Sending confirmation...")
-
-                        elif data.get("type") == "open_worker_websocket":
-                            print(f"Starting Worker Websocket Thread: {settings.WORKER_ID}")
-                            start_worker_thread(settings.WORKER_ID)
-
-                        elif data.get("type") == "open_conversation_websocket":
-                            content = data["data"]["content"]
-                            conversation_id = data["data"]["conversation_id"]
-                            print(f"Starting Conversation Websocket Thread: {conversation_id}")
-                            start_conversation_thread(conversation_id, content)
-
-                        # Not sure if necessary to be sent with SSE as this can
-                        # be done inside websocket.
-                        # Will keep around just in case.
-                        elif data.get("type") == "close_conversation_websocket":
-                            conversation_id = data["data"]["conversation_id"]
-                            print("Closing WebSocket connection for conversation in a thread...")
-                            shutdown_conversation_thread(conversation_id)
-
-                        else:
-                            print(f"Received message: {data}")
+                        await on_event(data)
                     except json.JSONDecodeError:
                         print(f"Received non-JSON message: {message}")
                 elif decoded.startswith(":"):
