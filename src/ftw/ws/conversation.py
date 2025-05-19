@@ -3,6 +3,7 @@ import json
 import ssl
 import threading
 import websockets
+import time
 
 from ftw.agent.registry import AGENT_REGISTRY
 from ftw.conf import settings
@@ -75,30 +76,57 @@ async def open_conversation_websocket(conversation_id, content=None, shutdown_ev
             print(f"WebSocket for conversation_id: {conversation_id} opened")
 
             async def respond_to_prompt(content):
+                # message = {"type": "prompt_response", "content": {
+                #     "state": "working",
+                #     "worker_id": settings.WORKER_ID,
+                # }}
+                # await websocket.send(json.dumps(message))
+
                 print(f"Responding to prompt: {content}")
                 # response = generate_response(content)
                 response = f"response to: {content}"
                 # response = AGENT_REGISTRY["generate_text"](content)
-                message = {"type": "prompt_response", "content": response}
+
+                time.sleep(3)
+                message = {
+                    "jsonrpc": "2.0",
+                    "method": "prompt_response",
+                    "params": {
+                        "content": response
+                    }
+                }
                 await websocket.send(json.dumps(message))
 
             if content is not None:
                 await respond_to_prompt(content)
 
-            while not shutdown_event.is_set():  # Check if the shutdown event is set
+            while not shutdown_event.is_set():
                 try:
                     message = await asyncio.wait_for(websocket.recv(), timeout=10)
-                    data = json.loads(message)
+                    request = json.loads(message)
 
-                    print(f"[WebSocket] Received: {data}")
+                    if request.get("jsonrpc") == "2.0" and "method" in request:
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request.get("id"),
+                        }
 
-                    if data.get("type") == "close":
-                        print(f"WebSocket conversation {conversation_id} instructed to close.")
-                        break
+                        print(f"[WebSocket] Received: {request}")
 
-                    elif data.get("type") == "prompt_query":
-                        content = data["data"]["content"]
-                        await respond_to_prompt(content)
+                        if request.get("method") == "close":
+                            print(f"WebSocket conversation {conversation_id} instructed to close.")
+                            break
+                        
+                        elif request.get("method") == "prompt_query":
+                            response["result"] = await respond_to_prompt(request["params"]["content"])
+
+                        else:
+                            response["error"] = {
+                                "code": -32601,
+                                "message": "Method not found"
+                            }
+
+                        await websocket.send(json.dumps(response))
 
                 except asyncio.TimeoutError:
                     print("WebSocket timeout, checking for shutdown...")
@@ -106,6 +134,24 @@ async def open_conversation_websocket(conversation_id, content=None, shutdown_ev
                 except websockets.exceptions.ConnectionClosed as e:
                     print(f"WebSocket connection closed: {e}")
                     break
+                
+                except Exception as e:
+                    print(f"Unexpected error: {e}")
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": request.get("id") if 'request' in locals() else None,
+                        "error": {
+                            "code": -32603,
+                            "message": str(e)
+                        }
+                    }
+                    try:
+                        await websocket.send(json.dumps(response))
+                    except Exception as send_error:
+                        print(f"Failed to send error response: {send_error}")
+                        break
+
+
 
             # Close WebSocket after finishing
             await websocket.close()

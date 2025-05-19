@@ -49,16 +49,28 @@ if __name__ == '__main__':
         agent_card=agent_card, http_handler=request_handler
     )
 
+    async def persistent_event_listener():
+        print("Launching persistent event listener...")
+        while True:
+            try:
+                await listen_for_events(request_handler.handle_event)
+            except asyncio.CancelledError:
+                print("Event listener task cancelled. Exiting loop.")
+                break
+            except Exception as e:
+                print(f"Event listener crashed with: {e}. Restarting in 1s...")
+                await asyncio.sleep(1)
+
     @asynccontextmanager
     async def lifespan(app):
         print("Starting SSE event listener...")
-        listener = listen_for_events(request_handler.handle_event)
-        task = asyncio.create_task(listener)
+        task = asyncio.create_task(persistent_event_listener())
         try:
             yield
         finally:
             task.cancel()
             await task
+
 
     import uvicorn
 
