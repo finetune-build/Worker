@@ -2,122 +2,153 @@ import asyncio
 import json
 import ssl
 import threading
+import time
 import websockets
 
-from ftw.agent.registry import AGENT_REGISTRY
 from ftw.conf import settings
 
-# Global dictionary to track active threads by worker_id
-worker_threads = {}
+# Should only be one worker websocket thread per each worker process.
+# Separate threads / processes should be made for cases when the worker is
+# handling multiple tasks in parallel, but only one worker websocket thread
+# would be need at a given time.
+# (i.e. two worker programs running this script would have two different
+# worker websocket thread references)
+worker_websocket_thread = None
+shutdown_event = None
 
-# Thread-safe lock to manage active_threads dictionary
-thread_lock = threading.Lock()
-
-# Flag to indicate if a thread should keep running
-worker_shutdown_event = threading.Event()
-
-# Dictionary to track shutdown events for each worker ID
-shutdown_events = {}
-
-# Modify the start_worker_thread function to use shutdown events
-def start_worker_thread():
+def worker_start_websocket_thread():
     """
-    Starts a new thread for the worker or joins an existing one.
+    Starts the worker websocket thread if not already running.
     """
-    with thread_lock:
-        if settings.WORKER_ID in worker_threads:
-            print(f"worker {settings.WORKER_ID} already active. Joining existing thread.")
-            # The thread is already running, return the existing thread
-            return worker_threads[settings.WORKER_ID]
-        else:
-            print(f"Starting a new thread for worker {settings.WORKER_ID}.")
-            # Create a shutdown event for the worker ID
-            shutdown_event = threading.Event()
-            shutdown_events[settings.WORKER_ID] = shutdown_event
-            
-            # Create and start the new thread
-            new_thread = threading.Thread(target=run_worker, args=(shutdown_event))
-            new_thread.start()
-            
-            worker_threads[settings.WORKER_ID] = new_thread
-            return new_thread
+    global worker_websocket_thread, shutdown_event
+    if worker_websocket_thread is not None and worker_websocket_thread.is_alive():
+        return worker_websocket_thread
+    print("Starting new worker websocket thread.")
+    shutdown_event = threading.Event()
+    worker_websocket_thread = threading.Thread(
+        target=run_websocket, args=(shutdown_event,), daemon=True
+    )
+    worker_websocket_thread.start()
+    return worker_websocket_thread
 
-def shutdown_worker_thread():
+def worker_shutdown_websocket_thread():
     """
-    Sets the shutdown event for the specified worker thread to stop it.
+    Signals the websocket thread to shut down.
     """
-    with thread_lock:
-        if settings.WORKER_ID in shutdown_events:
-            print(f"Shutting down worker thread for {settings.WORKER_ID}.")
-            shutdown_events[settings.WORKER_ID].set()  # Signal the thread to stop
-        else:
-            print(f"No active thread found for worker {settings.WORKER_ID}.")
+    global shutdown_event
+    if shutdown_event is not None:
+        shutdown_event.set()
 
-def run_worker(shutdown_event=None):
+def run_websocket(shutdown_event):
     """
-    The function to handle the WebSocket connection and worker for a specific worker_id.
+    Target function for the websocket thread.
     """
-    asyncio.run(open_worker_websocket(shutdown_event))
+    client = WorkerWebSocketClient(shutdown_event)
+    asyncio.run(client.run())
 
-async def open_worker_websocket(shutdown_event=None):
-    uri = f"wss://{settings.HOST}/ws/worker/{settings.WORKER_ID}/machine/"
-    headers = {
-        "Authorization": f"Worker {settings.WORKER_TOKEN}",
-        "X-Worker-ID": settings.WORKER_ID,
-    }
+class WorkerWebSocketClient:
+    def __init__(self, shutdown_event):
+        self.shutdown_event = shutdown_event
+        self.websocket = None
 
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    async def respond_to_prompt(self, content):
+        print(f"Responding to prompt: {content}")
+        # Simulate processing time
+        time.sleep(3)
+        # You can use AGENT_REGISTRY here if needed
+        response = f"response to: {content}"
+        return response
 
-    try:
-        async with websockets.connect(uri, additional_headers=headers, ssl=ssl_context) as websocket:
-            print(f"WebSocket for worker_id: {settings.WORKER_ID} opened")
+    async def handle_message(self, request):
+        response = {
+            "jsonrpc": "2.0",
+            "id": request.get("id"),
+        }
+        try:
+            method = request.get("method")
+            if method == "close":
+                print(f"WebSocket worker {settings.WORKER_ID} instructed to close.")
+                response["result"] = "closed"
+                await self.websocket.send(json.dumps(response))
+                return "close"
+            elif method == "prompt_query":
+                content = request["params"]["content"]
+                result = await self.respond_to_prompt(content)
+                response["result"] = result
+            else:
+                response["error"] = {
+                    "code": -32601,
+                    "message": "Method not found"
+                }
+            await self.websocket.send(json.dumps(response))
+        except Exception as e:
+            print(f"Error handling message: {e}")
+            response["error"] = {
+                "code": -32603,
+                "message": str(e)
+            }
+            await self.websocket.send(json.dumps(response))
 
-            async def respond_to_prompt(content):
-                print(f"Responding to prompt: {content}")
-                # response = generate_response(content)
-                response = f"response to: {content}"
-                # response = AGENT_REGISTRY["generate_text"](content)
-                message = {"type": "prompt_response", "content": response}
-                await websocket.send(json.dumps(message))
+    async def run(self):
+        uri = f"wss://{settings.HOST}/ws/worker/{settings.WORKER_ID}/machine/"
+        headers = {
+            "Authorization": f"Worker {settings.WORKER_TOKEN}",
+            "X-Worker-ID": settings.WORKER_ID,
+            "X-Session-ID": str(settings.SESSION_UUID),
+        }
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
 
-            if content is not None:
-                await respond_to_prompt(content)
+        try:
+            async with websockets.connect(uri, additional_headers=headers, ssl=ssl_context) as websocket:
+                self.websocket = websocket
+                print(f"WebSocket for worker_id: {settings.WORKER_ID} opened")
 
-            while not shutdown_event.is_set():  # Check if the shutdown event is set
-                try:
-                    message = await asyncio.wait_for(websocket.recv(), timeout=10)
-                    data = json.loads(message)
+                while not self.shutdown_event.is_set():
+                    try:
+                        message = await asyncio.wait_for(websocket.recv(), timeout=10)
+                        request = json.loads(message)
+                        print(f"[WebSocket] Received: {request}")
 
-                    print(f"[WebSocket] Received: {data}")
+                        if request.get("jsonrpc") == "2.0" and "method" in request:
+                            result = await self.handle_message(request)
+                            if result == "close":
+                                break
+                        else:
+                            print("Invalid JSON-RPC message received.")
 
-                    if data.get("type") == "close":
-                        print(f"WebSocket worker {settings.WORKER_ID} instructed to close.")
+                    except asyncio.TimeoutError:
+                        print("WebSocket timeout, checking for shutdown...")
+
+                    except websockets.exceptions.ConnectionClosed as e:
+                        print(f"WebSocket connection closed: {e}")
                         break
 
-                    elif data.get("type") == "prompt_query":
-                        content = data["data"]["content"]
-                        await respond_to_prompt(content)
+                    except Exception as e:
+                        print(f"Unexpected error: {e}")
+                        # Try to send error response if possible
+                        try:
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": request.get("id") if 'request' in locals() else None,
+                                "error": {
+                                    "code": -32603,
+                                    "message": str(e)
+                                }
+                            }
+                            await websocket.send(json.dumps(response))
+                        except Exception as send_error:
+                            print(f"Failed to send error response: {send_error}")
+                            break
 
-                except asyncio.TimeoutError:
-                    print("WebSocket timeout, checking for shutdown...")
+                await websocket.close()
+                print(f"WebSocket for worker_id {settings.WORKER_ID} closed gracefully.")
 
-                except websockets.exceptions.ConnectionClosed as e:
-                    print(f"WebSocket connection closed: {e}")
-                    break
+        except Exception as e:
+            print(f"WebSocket error: {e}")
 
-            # Close WebSocket after finishing
-            await websocket.close()
-            print(f"WebSocket for worker_id {settings.WORKER_ID} closed gracefully.")
-
-    except Exception as e:
-        print(f"WebSocket error: {e}")
-
-    finally:
-        with thread_lock:
-            if settings.WORKER_ID in worker_threads:
-                del worker_threads[settings.WORKER_ID]
-            print(f"Cleaned up worker thread {settings.WORKER_ID}.")
-
-        print("WebSocket worker cleanup complete.")
+        finally:
+            global worker_websocket_thread
+            worker_websocket_thread = None
+            print("WebSocket worker cleanup complete.")

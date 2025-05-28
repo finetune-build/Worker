@@ -3,7 +3,7 @@ import asyncio
 
 from contextlib import asynccontextmanager
 
-from ftw.sse.events import listen_for_events
+from ftw.sse.event_listener import EventListener 
 
 from agent import HelloWorldAgentExecutor
 from ftw_request_handler import FTWRequestHandler
@@ -12,7 +12,6 @@ from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import (
-    AgentAuthentication,
     AgentCapabilities,
     AgentCard,
     AgentSkill,
@@ -36,7 +35,6 @@ if __name__ == '__main__':
         defaultOutputModes=['text'],
         capabilities=AgentCapabilities(streaming=True),
         skills=[skill],
-        authentication=AgentAuthentication(schemes=['public']),
     )
 
     # Swaps out `DefaultRequestHandler` with `FTWRequestHandler`.
@@ -53,7 +51,8 @@ if __name__ == '__main__':
         print("Launching persistent event listener...")
         while True:
             try:
-                await listen_for_events(request_handler.handle_event)
+                event_listener = EventListener(request_handler.handle_event)
+                await event_listener.start()
             except asyncio.CancelledError:
                 print("Event listener task cancelled. Exiting loop.")
                 break

@@ -1,7 +1,8 @@
 import aiohttp
 import asyncio
 
-from ftw.sse.events import listen_for_events, handle_event
+from ftw.sse.event_listener import EventListener
+from ftw.sse.events import handle_event
 from ftw.agent.registry import AGENT_REGISTRY, autodiscover_agents
 
 async def start_worker():
@@ -15,7 +16,8 @@ async def start_worker():
 
     while True:
         try:
-            await listen_for_events(handle_event)
+            event_listener = EventListener(handle_event)
+            await event_listener.start()
             print(f"Disconnected from event stream. Retrying in {retry_delay}s...")
         except aiohttp.ClientResponseError as e:
             print(f"HTTP error occurred: {e.status} - {e.message}")
