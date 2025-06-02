@@ -61,7 +61,7 @@ def run_conversation(conversation_id, content=None, shutdown_event=None):
     asyncio.run(open_conversation_websocket(conversation_id, content, shutdown_event))
 
 async def open_conversation_websocket(conversation_id, content=None, shutdown_event=None):
-    uri = f"wss://{settings.HOST}/ws/conversation/{conversation_id}/machine/"
+    uri = f"wss://{settings.DJANGO_HOST}/ws/conversation/{conversation_id}/machine/"
     headers = {
         "Authorization": f"Worker {settings.WORKER_TOKEN}",
         "X-Worker-ID": settings.WORKER_ID,

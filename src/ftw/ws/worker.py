@@ -90,7 +90,7 @@ class WorkerWebSocketClient:
             await self.websocket.send(json.dumps(response))
 
     async def run(self):
-        uri = f"wss://{settings.HOST}/ws/worker/{settings.WORKER_ID}/machine/"
+        uri = f"wss://{settings.DJANGO_HOST}/ws/worker/{settings.WORKER_ID}/machine/"
         headers = {
             "Authorization": f"Worker {settings.WORKER_TOKEN}",
             "X-Worker-ID": settings.WORKER_ID,

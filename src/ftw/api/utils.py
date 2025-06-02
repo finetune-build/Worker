@@ -10,7 +10,7 @@ async def request(method, endpoint, params=None, json=None, headers=DEFAULT_HEAD
     """
     Wrapper for making requests to API server
     """
-    domain = f"https://{settings.HOST}/v1/"
+    domain = f"https://{settings.DJANGO_HOST}/v1/"
     url =  domain + endpoint
     async with aiohttp.ClientSession(headers=headers) as session:
         try:

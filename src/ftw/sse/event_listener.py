@@ -16,7 +16,7 @@ class EventListener:
         """
         Opens stream with API server for SSE.
         """
-        url = f"https://{settings.HOST}/v1/worker/sse/"
+        url = f"https://{settings.DJANGO_HOST}/v1/worker/sse/"
         headers = {
             "Authorization": f"Worker {settings.WORKER_TOKEN}",
             "X-Worker-ID": settings.WORKER_ID,

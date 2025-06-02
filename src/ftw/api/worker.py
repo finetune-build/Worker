@@ -4,7 +4,7 @@ from ftw.conf import settings
 from ftw.api.utils import request
 
 async def worker_pong():
-    url = f"https://{settings.HOST}/v1/worker/{settings.WORKER_ID}/pong/"
+    url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/pong/"
     headers = {
         "Authorization": f"Worker {settings.WORKER_TOKEN}",
         "Content-Type": "application/json",
