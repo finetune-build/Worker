@@ -1,3 +1,6 @@
 [submodule "examples/a2a/a2a-python"]
 	path = examples/a2a/a2a-python
 	url = https://github.com/google-a2a/a2a-python.git
+[submodule "examples/mcp/python-sdk"]
+	path = examples/mcp/python-sdk
+	url = https://github.com/modelcontextprotocol/python-sdk.git

@@ -46,3 +46,9 @@ path = "src/ftw/__init__.py"  # or another version file
 [tool.black]
 line-length = 88
 target-version = ["py39"]
+
+[tool.uv.workspace]
+members = [
+    "examples/weather",
+    "examples/mcp/mcp-server-demo",
+]
