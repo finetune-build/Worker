@@ -1,0 +1,11 @@
+[project]
+name = "worker-integration"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp[cli]>=1.9.2",
+    "ftw>=0.1.0",
+]

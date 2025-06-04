@@ -51,4 +51,5 @@ target-version = ["py39"]
 members = [
     "examples/weather",
     "examples/mcp/mcp-server-demo",
+    "examples/mcp/worker-integration",
 ]
