@@ -1,36 +1,12 @@
 import httpx
-
+import asyncio
+import signal
 from typing import Any
 from mcp.server.fastmcp import FastMCP
-from ftw.sse.event_listener import EventListener 
-from ftw.sse.events import handle_event
-from contextlib import asynccontextmanager
+from ftw.sse.lifespan import create_lifespan
 
-async def persistent_event_listener():
-    print("Launching persistent event listener...")
-    while True:
-        try:
-            event_listener = EventListener(handle_event)
-            await event_listener.start()
-        except asyncio.CancelledError:
-            print("Event listener task cancelled. Exiting loop.")
-            break
-        except Exception as e:
-            print(f"Event listener crashed with: {e}. Restarting in 1s...")
-            await asyncio.sleep(1)
-
-@asynccontextmanager
-async def lifespan(app):
-    print("Starting SSE event listener...")
-    task = asyncio.create_task(persistent_event_listener())
-    try:
-        yield
-    finally:
-        task.cancel()
-        await task
-
-# Initialize FastMCP server
-mcp = FastMCP("weather")
+# Initialize FastMCP server with the lifespan
+mcp = FastMCP("weather", lifespan=create_lifespan())
 
 # Constants
 NWS_API_BASE = "https://api.weather.gov"
@@ -81,6 +57,25 @@ async def get_alerts(state: str) -> str:
     return "\n---\n".join(alerts)
 
 @mcp.tool()
+async def get_alerts_pa() -> str:
+    """Get weather alerts for a US state.
+
+    Args:
+        state: Always PA
+    """
+    url = f"{NWS_API_BASE}/alerts/active/area/PA"
+    data = await make_nws_request(url)
+
+    if not data or "features" not in data:
+        return "Unable to fetch alerts or no alerts found."
+
+    if not data["features"]:
+        return "No active alerts for this state."
+
+    alerts = [format_alert(feature) for feature in data["features"]]
+    return "\n---\n".join(alerts)
+
+@mcp.tool()
 async def get_forecast(latitude: float, longitude: float) -> str:
     """Get weather forecast for a location.
 
@@ -116,6 +111,41 @@ Forecast: {period['detailedForecast']}
 
     return "\n---\n".join(forecasts)
 
+async def shutdown(signal, loop):
+    """Cleanup tasks tied to the service's shutdown."""
+    print(f"Received exit signal {signal.name}...")
+    weather_service._shutdown.set()
+    
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    [task.cancel() for task in tasks]
+    
+    print(f"Cancelling {len(tasks)} outstanding tasks")
+    await asyncio.gather(*tasks, return_exceptions=True)
+    loop.stop()
+
+def handle_exception(loop, context):
+    # Handle exceptions that occur during async operation
+    msg = context.get("exception", context["message"])
+    print(f"Error: {msg}")
+
 if __name__ == "__main__":
-    # Initialize and run the server
-    mcp.run(transport='stdio')
+    # Get the current event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    # Handle exceptions
+    loop.set_exception_handler(handle_exception)
+    
+    # Register signal handlers
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(
+            sig,
+            lambda s=sig: asyncio.create_task(shutdown(s, loop))
+        )
+    
+    try:
+        # Initialize and run the server with SSE event listener
+        mcp.run(transport='stdio')
+    finally:
+        loop.close()
+        print("Successfully shutdown the server.")

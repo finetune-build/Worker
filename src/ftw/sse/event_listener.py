@@ -1,3 +1,4 @@
+import asyncio
 import aiohttp
 import json
 
@@ -11,20 +12,23 @@ class EventListener:
     def __init__(self, on_event):
         self.on_event = on_event
         self.pending_tasks = []
+        self._shutdown = asyncio.Event()
+        self.url = f"https://{settings.DJANGO_HOST}/v1/worker/sse/"
+        self.headers = {
+            "Authorization": f"Worker {settings.WORKER_TOKEN}",
+            "X-Worker-ID": settings.WORKER_ID,
+            "X-Session-ID": str(settings.SESSION_UUID),
+        }
+        self.client = None
 
     async def start(self):
         """
         Opens stream with API server for SSE.
         """
-        url = f"https://{settings.DJANGO_HOST}/v1/worker/sse/"
-        headers = {
-            "Authorization": f"Worker {settings.WORKER_TOKEN}",
-            "X-Worker-ID": settings.WORKER_ID,
-            "X-Session-ID": str(settings.SESSION_UUID),
-        }
         timeout = aiohttp.ClientTimeout(sock_read=None)
-        async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
-            async with session.get(url, ssl=False) as response:
+        self.client = aiohttp.ClientSession(timeout=timeout, headers=self.headers)
+        async with self.client as session:
+            async with session.get(self.url, ssl=False) as response:
                 if response.status != 200:
                     error_details = await response.text()
                     print(f"Error details: {error_details}")
@@ -52,3 +56,8 @@ class EventListener:
             self.worker_tasks = task_list_response["data"]["results"]
             print(f"{task_list_response['data']['count']} Submitted Worker Tasks")
             worker_start_websocket_thread()
+
+    async def shutdown(self):
+        self._shutdown.set()
+        if self.client:
+            await self.client.close()

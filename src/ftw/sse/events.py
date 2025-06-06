@@ -5,6 +5,7 @@ from ftw.conf import settings
 from ftw.sse.utils import * # Applies prepended print statement.
 from ftw.ws.conversation import start_conversation_thread, shutdown_conversation_thread
 from ftw.ws.worker import worker_start_websocket_thread
+from ftw.mcp.client import worker_start_mcp_client
 
 async def handle_event(data):
     """
@@ -14,14 +15,19 @@ async def handle_event(data):
     params = data.get("params", {})
     request_id = data.get("id")
 
-    if method == "worker_ping" or method == "worker_ping_all_active":
-        print("Worker Ping Received. Sending pong...")
-        await worker_pong()
-        return {
-            "jsonrpc": "2.0",
-            "result": "pong",
-            "id": request_id,
-        }
+    # if method == "worker_ping" or method == "worker_ping_all_active":
+    #     print("Worker Ping Received. Sending pong...")
+    #     await worker_pong()
+    #     return {
+    #         "jsonrpc": "2.0",
+    #         "result": "pong",
+    #         "id": request_id,
+    #     }
+
+    # elif method == "worker_start_mcp_client":
+    if method == "worker_ping":
+        print("Starting MCP Client")
+        worker_start_mcp_client()
 
     # elif method == "tool":
     #     tool_name = params.get("tool_name")
