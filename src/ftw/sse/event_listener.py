@@ -5,19 +5,20 @@ import json
 from ftw.api.worker import get_worker_task_list
 
 from ftw.conf import settings
-from ftw.sse.utils import * # Applies prepended print statement.
-from ftw.ws.worker import worker_start_websocket_thread
+# from ftw.sse.utils import * # Applies prepended print statement.
+# from ftw.ws.worker import worker_start_websocket_thread
 
 class EventListener:
     def __init__(self, on_event):
         self.on_event = on_event
         self.pending_tasks = []
         self._shutdown = asyncio.Event()
-        self.url = f"https://{settings.DJANGO_HOST}/v1/worker/sse/"
+        self.url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/sse/"
         self.headers = {
             "Authorization": f"Worker {settings.WORKER_TOKEN}",
             "X-Worker-ID": settings.WORKER_ID,
             "X-Session-ID": str(settings.SESSION_UUID),
+            "X-Client-Role": "machine",
         }
         self.client = None
 
@@ -55,7 +56,7 @@ class EventListener:
         if task_list_response["success"]:
             self.worker_tasks = task_list_response["data"]["results"]
             print(f"{task_list_response['data']['count']} Submitted Worker Tasks")
-            worker_start_websocket_thread()
+            # worker_start_websocket_thread()
 
     async def shutdown(self):
         self._shutdown.set()

@@ -1,16 +1,27 @@
 import httpx
-import asyncio
-import signal
+
 from typing import Any
 from mcp.server.fastmcp import FastMCP
 from ftw.sse.lifespan import create_lifespan
+from mcp.types import Resource, ResourceTemplate, Annotations
 
-# Initialize FastMCP server with the lifespan
+# Initialize FastMCP server
 mcp = FastMCP("weather", lifespan=create_lifespan())
 
 # Constants
 NWS_API_BASE = "https://api.weather.gov"
 USER_AGENT = "weather-app/1.0"
+
+@mcp.resource("config://app")
+def get_config() -> str:
+    """Static configuration data"""
+    return "App configuration here"
+
+
+@mcp.resource("users://{user_id}/profile")
+def get_user_profile(user_id: str) -> str:
+    """Dynamic user data"""
+    return f"Profile data for user {user_id}"
 
 async def make_nws_request(url: str) -> dict[str, Any] | None:
     """Make a request to the NWS API with proper error handling."""
@@ -58,10 +69,7 @@ async def get_alerts(state: str) -> str:
 
 @mcp.tool()
 async def get_alerts_pa() -> str:
-    """Get weather alerts for a US state.
-
-    Args:
-        state: Always PA
+    """Get weather alerts for a just PA state.
     """
     url = f"{NWS_API_BASE}/alerts/active/area/PA"
     data = await make_nws_request(url)
@@ -111,41 +119,6 @@ Forecast: {period['detailedForecast']}
 
     return "\n---\n".join(forecasts)
 
-async def shutdown(signal, loop):
-    """Cleanup tasks tied to the service's shutdown."""
-    print(f"Received exit signal {signal.name}...")
-    weather_service._shutdown.set()
-    
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    [task.cancel() for task in tasks]
-    
-    print(f"Cancelling {len(tasks)} outstanding tasks")
-    await asyncio.gather(*tasks, return_exceptions=True)
-    loop.stop()
-
-def handle_exception(loop, context):
-    # Handle exceptions that occur during async operation
-    msg = context.get("exception", context["message"])
-    print(f"Error: {msg}")
-
 if __name__ == "__main__":
-    # Get the current event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    # Handle exceptions
-    loop.set_exception_handler(handle_exception)
-    
-    # Register signal handlers
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(
-            sig,
-            lambda s=sig: asyncio.create_task(shutdown(s, loop))
-        )
-    
-    try:
-        # Initialize and run the server with SSE event listener
-        mcp.run(transport='stdio')
-    finally:
-        loop.close()
-        print("Successfully shutdown the server.")
+    # Initialize and run the server
+    mcp.run(transport='stdio')

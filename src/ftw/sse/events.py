@@ -2,10 +2,11 @@ from ftw.api.worker import worker_pong
 
 from ftw.conf import settings
 # from ftw.sse.tasks import run_task_by_name
-from ftw.sse.utils import * # Applies prepended print statement.
+# from ftw.sse.utils import * # Applies prepended print statement.
 from ftw.ws.conversation import start_conversation_thread, shutdown_conversation_thread
 from ftw.ws.worker import worker_start_websocket_thread
-from ftw.mcp.client import worker_start_mcp_client
+from ftw.mcp.client import run_mcp_request 
+from ftw.api.worker import worker_mcp_response
 
 async def handle_event(data):
     """
@@ -15,19 +16,25 @@ async def handle_event(data):
     params = data.get("params", {})
     request_id = data.get("id")
 
-    # if method == "worker_ping" or method == "worker_ping_all_active":
-    #     print("Worker Ping Received. Sending pong...")
-    #     await worker_pong()
-    #     return {
-    #         "jsonrpc": "2.0",
-    #         "result": "pong",
-    #         "id": request_id,
-    #     }
+    if method == "worker_ping" or method == "worker_ping_all_active":
+        print("Worker Ping Received. Sending pong...")
+        await worker_pong()
+        return {
+            "jsonrpc": "2.0",
+            "result": "pong",
+            "id": request_id,
+        }
 
-    # elif method == "worker_start_mcp_client":
-    if method == "worker_ping":
+    elif method == "worker_mcp_request":
         print("Starting MCP Client")
-        worker_start_mcp_client()
+        response = await run_mcp_request(params)
+        print(f"response: {response}")
+        await worker_mcp_response(response)
+        return {
+            "jsonrpc": "2.0",
+            "result": "MCP request processed",
+            "id": request_id,
+        }
 
     # elif method == "tool":
     #     tool_name = params.get("tool_name")

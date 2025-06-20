@@ -20,6 +20,24 @@ async def worker_pong():
         except Exception as e:
             print(f"Ping response error: {e}")
 
+async def worker_mcp_response(request):
+    url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/mcp/"
+    headers = {
+        "Authorization": f"Worker {settings.WORKER_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    async with aiohttp.ClientSession(headers=headers) as session:
+        try:
+            async with session.post(
+                url, ssl=False, json=request
+            ) as resp:
+                if resp.status != 200:
+                    print(f"Failed to respond send response. Status: {resp.status}")
+        except Exception as e:
+            print(f"mcp response error: {e}")
+
+
 async def get_worker_task_list(task_state="submitted", protocol="a2a"):
     return await request(
         "GET",
