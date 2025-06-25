@@ -15,7 +15,7 @@ class EventListener:
         self._shutdown = asyncio.Event()
         self.url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/sse/"
         self.headers = {
-            "Authorization": f"Worker {settings.WORKER_TOKEN}",
+            "Authorization": f"Access {settings.ACCESS_TOKEN}",
             "X-Worker-ID": settings.WORKER_ID,
             "X-Session-ID": str(settings.SESSION_UUID),
             "X-Client-Role": "machine",

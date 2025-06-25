@@ -6,7 +6,7 @@ from ftw.api.utils import request
 async def worker_pong():
     url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/pong/"
     headers = {
-        "Authorization": f"Worker {settings.WORKER_TOKEN}",
+        "Authorization": f"Access {settings.ACCESS_TOKEN}",
         "Content-Type": "application/json",
     }
 
@@ -23,7 +23,7 @@ async def worker_pong():
 async def worker_mcp_response(request):
     url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/mcp/"
     headers = {
-        "Authorization": f"Worker {settings.WORKER_TOKEN}",
+        "Authorization": f"Access {settings.ACCESS_TOKEN}",
         "Content-Type": "application/json",
     }
 

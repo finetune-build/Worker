@@ -2,7 +2,7 @@ import aiohttp
 from ftw.conf import settings
 
 DEFAULT_HEADERS = {
-    "Authorization": f"Worker {settings.WORKER_TOKEN}",
+    "Authorization": f"Access {settings.ACCESS_TOKEN}",
     "Content-Type": "application/json"
 }
 

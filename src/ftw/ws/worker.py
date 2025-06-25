@@ -92,7 +92,7 @@ class WorkerWebSocketClient:
     async def run(self):
         uri = f"wss://{settings.DJANGO_HOST}/ws/worker/{settings.WORKER_ID}/machine/"
         headers = {
-            "Authorization": f"Worker {settings.WORKER_TOKEN}",
+            "Authorization": f"Access {settings.ACCESS_TOKEN}",
             "X-Worker-ID": settings.WORKER_ID,
             "X-Session-ID": str(settings.SESSION_UUID),
         }
