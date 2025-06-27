@@ -1,7 +1,7 @@
 import aiohttp
 
-from ftw.conf import settings
-from ftw.api.utils import request
+from finetune_sdk.conf import settings
+from finetune_sdk.api.utils import request
 
 async def worker_pong():
     url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/pong/"

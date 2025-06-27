@@ -1,4 +1,4 @@
-from ftw.sse.events import handle_event
+from finetune_sdk.sse.events import handle_event
 
 from a2a.server.request_handlers.default_request_handler import DefaultRequestHandler
 

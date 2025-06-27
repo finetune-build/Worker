@@ -1,4 +1,4 @@
-from ftw import register_agent 
+from finetune_sdk import register_agent 
 
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import torch

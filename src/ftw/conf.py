@@ -1,7 +1,7 @@
 import importlib
 
 def load_settings():
-    return importlib.import_module("ftw.settings")
+    return importlib.import_module("finetune_sdk.settings")
 
 settings = load_settings()
 

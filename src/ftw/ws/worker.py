@@ -5,7 +5,7 @@ import threading
 import time
 import websockets
 
-from ftw.conf import settings
+from finetune_sdk.conf import settings
 
 # Should only be one worker websocket thread per each worker process.
 # Separate threads / processes should be made for cases when the worker is

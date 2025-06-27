@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "finetune-worker"
+name = "finetune-sdk"
 dynamic = ["version"]
 authors = [
   { name = "Peter Pak", email = "ppak10@gmail.com" },
@@ -18,12 +18,9 @@ classifiers = [
 
 dependencies = ["aiohttp", "celery", "python-dotenv", "sqlalchemy", "watchdog", "websockets"]
 
-[project.scripts]
-ftw = "manage:main"
-
 [project.urls]
-Homepage = "https://github.com/finetune-build/Worker"
-Issues = "https://github.com/finetune-build/Worker/issues"
+Homepage = "https://github.com/finetune-build/python-sdk"
+Issues = "https://github.com/finetune-build/python-sdk/issues"
 
 [tool.hatch.build]
 sources = ["src"]
@@ -41,7 +38,7 @@ include = [
 ]
 
 [tool.hatch.version]
-path = "src/ftw/__init__.py"  # or another version file
+path = "src/finetune_sdk/__init__.py"  # or another version file
 
 [tool.black]
 line-length = 88
@@ -52,4 +49,5 @@ members = [
     "examples/weather",
     "examples/mcp/mcp-server-demo",
     "examples/mcp/worker-integration",
+    "examples/mcp/authentication",
 ]

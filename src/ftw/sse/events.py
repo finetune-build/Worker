@@ -1,12 +1,12 @@
-from ftw.api.worker import worker_pong
+from finetune_sdk.api.worker import worker_pong
 
-from ftw.conf import settings
-# from ftw.sse.tasks import run_task_by_name
-# from ftw.sse.utils import * # Applies prepended print statement.
-from ftw.ws.conversation import start_conversation_thread, shutdown_conversation_thread
-from ftw.ws.worker import worker_start_websocket_thread
-from ftw.mcp.client import run_mcp_request 
-from ftw.api.worker import worker_mcp_response
+from finetune_sdk.conf import settings
+# from finetune_sdk.sse.tasks import run_task_by_name
+# from finetune_sdk.sse.utils import * # Applies prepended print statement.
+from finetune_sdk.ws.conversation import start_conversation_thread, shutdown_conversation_thread
+from finetune_sdk.ws.worker import worker_start_websocket_thread
+from finetune_sdk.mcp.client import run_mcp_request 
+from finetune_sdk.api.worker import worker_mcp_response
 
 async def handle_event(data):
     """

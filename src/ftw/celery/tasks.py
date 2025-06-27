@@ -1,4 +1,4 @@
-from ftw.celery.app import celery
+from finetune_sdk.celery.app import celery
 
 @celery.task
 def add(x: int, y: int = 10) -> int:

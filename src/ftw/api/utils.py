@@ -1,5 +1,5 @@
 import aiohttp
-from ftw.conf import settings
+from finetune_sdk.conf import settings
 
 DEFAULT_HEADERS = {
     "Authorization": f"Access {settings.ACCESS_TOKEN}",

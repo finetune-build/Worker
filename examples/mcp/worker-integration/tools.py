@@ -1,27 +1,24 @@
-import httpx
+# Example tools from weather.py example.
 
+from main import mcp
 from typing import Any
-from mcp.server.fastmcp import FastMCP
-from ftw.sse.lifespan import create_lifespan
-from mcp.types import Resource, ResourceTemplate, Annotations
 
-# Initialize FastMCP server
-mcp = FastMCP("weather", lifespan=create_lifespan())
+import httpx
 
 # Constants
 NWS_API_BASE = "https://api.weather.gov"
 USER_AGENT = "weather-app/1.0"
 
-@mcp.resource("config://app")
-def get_config() -> str:
-    """Static configuration data"""
-    return "App configuration here"
-
-
-@mcp.resource("users://{user_id}/profile")
-def get_user_profile(user_id: str) -> str:
-    """Dynamic user data"""
-    return f"Profile data for user {user_id}"
+def format_alert(feature: dict) -> str:
+    """Format an alert feature into a readable string."""
+    props = feature["properties"]
+    return f"""
+Event: {props.get('event', 'Unknown')}
+Area: {props.get('areaDesc', 'Unknown')}
+Severity: {props.get('severity', 'Unknown')}
+Description: {props.get('description', 'No description available')}
+Instructions: {props.get('instruction', 'No specific instructions provided')}
+"""
 
 async def make_nws_request(url: str) -> dict[str, Any] | None:
     """Make a request to the NWS API with proper error handling."""
@@ -37,17 +34,6 @@ async def make_nws_request(url: str) -> dict[str, Any] | None:
         except Exception:
             return None
 
-def format_alert(feature: dict) -> str:
-    """Format an alert feature into a readable string."""
-    props = feature["properties"]
-    return f"""
-Event: {props.get('event', 'Unknown')}
-Area: {props.get('areaDesc', 'Unknown')}
-Severity: {props.get('severity', 'Unknown')}
-Description: {props.get('description', 'No description available')}
-Instructions: {props.get('instruction', 'No specific instructions provided')}
-"""
-
 @mcp.tool()
 async def get_alerts(state: str) -> str:
     """Get weather alerts for a US state.
@@ -56,22 +42,6 @@ async def get_alerts(state: str) -> str:
         state: Two-letter US state code (e.g. CA, NY)
     """
     url = f"{NWS_API_BASE}/alerts/active/area/{state}"
-    data = await make_nws_request(url)
-
-    if not data or "features" not in data:
-        return "Unable to fetch alerts or no alerts found."
-
-    if not data["features"]:
-        return "No active alerts for this state."
-
-    alerts = [format_alert(feature) for feature in data["features"]]
-    return "\n---\n".join(alerts)
-
-@mcp.tool()
-async def get_alerts_pa() -> str:
-    """Get weather alerts for a just PA state.
-    """
-    url = f"{NWS_API_BASE}/alerts/active/area/PA"
     data = await make_nws_request(url)
 
     if not data or "features" not in data:
@@ -118,7 +88,3 @@ Forecast: {period['detailedForecast']}
         forecasts.append(forecast)
 
     return "\n---\n".join(forecasts)
-
-if __name__ == "__main__":
-    # Initialize and run the server
-    mcp.run(transport='stdio')

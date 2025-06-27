@@ -31,13 +31,13 @@ class RestartOnChangeHandler(FileSystemEventHandler):
 
 def start_worker_subprocess():
     return subprocess.Popen(
-        [sys.executable, "-m", "ftw.sse.run"]
+        [sys.executable, "-m", "finetune_sdk.sse.run"]
     )
 
 
 def start_celery_worker():
     return subprocess.Popen(
-        ["celery", "-A", "ftw.celery.app.celery", "worker", "--loglevel=info"]
+        ["celery", "-A", "finetune_sdk.celery.app.celery", "worker", "--loglevel=info"]
     )
 
 

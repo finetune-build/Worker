@@ -1,8 +1,8 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from ftw.sse.events import handle_event
-from ftw.sse.event_listener import EventListener
+from finetune_sdk.sse.events import handle_event
+from finetune_sdk.sse.event_listener import EventListener
 
 def create_lifespan(on_event = handle_event):
     @asynccontextmanager

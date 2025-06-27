@@ -1,9 +1,9 @@
 import aiohttp
 import asyncio
 
-from ftw.sse.event_listener import EventListener
-from ftw.sse.events import handle_event
-from ftw.agent.registry import AGENT_REGISTRY, autodiscover_agents
+from finetune_sdk.sse.event_listener import EventListener
+from finetune_sdk.sse.events import handle_event
+from finetune_sdk.agent.registry import AGENT_REGISTRY, autodiscover_agents
 
 async def start_worker():
     print("Discovering agent functions...")

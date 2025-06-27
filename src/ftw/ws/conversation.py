@@ -5,8 +5,8 @@ import threading
 import websockets
 import time
 
-from ftw.agent.registry import AGENT_REGISTRY
-from ftw.conf import settings
+from finetune_sdk.agent.registry import AGENT_REGISTRY
+from finetune_sdk.conf import settings
 
 # Global dictionary to track active threads by conversation_id
 conversation_threads = {}

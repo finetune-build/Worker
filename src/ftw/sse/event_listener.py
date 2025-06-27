@@ -2,11 +2,11 @@ import asyncio
 import aiohttp
 import json
 
-from ftw.api.worker import get_worker_task_list
+from finetune_sdk.api.worker import get_worker_task_list
 
-from ftw.conf import settings
-# from ftw.sse.utils import * # Applies prepended print statement.
-# from ftw.ws.worker import worker_start_websocket_thread
+from finetune_sdk.conf import settings
+# from finetune_sdk.sse.utils import * # Applies prepended print statement.
+# from finetune_sdk.ws.worker import worker_start_websocket_thread
 
 class EventListener:
     def __init__(self, on_event):
@@ -36,7 +36,7 @@ class EventListener:
                     response.raise_for_status()
 
                 print(f"Connected as {settings.WORKER_ID}, status: {response.status}")
-                await self.synchronize()
+                # await self.synchronize()
 
                 async for line in response.content:
                     decoded = line.decode("utf-8").strip()

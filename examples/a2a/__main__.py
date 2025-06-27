@@ -3,7 +3,7 @@ import asyncio
 
 from contextlib import asynccontextmanager
 
-from ftw.sse.event_listener import EventListener 
+from finetune_sdk.sse.event_listener import EventListener 
 
 from agent import HelloWorldAgentExecutor
 from ftw_request_handler import FTWRequestHandler

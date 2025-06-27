@@ -5,7 +5,7 @@ from typing import get_type_hints, Any
 from celery.app.task import Task
 
 # Import your tasks module
-tasks_module = importlib.import_module("ftw.celery.tasks")
+tasks_module = importlib.import_module("finetune_sdk.celery.tasks")
 
 # Collect all Celery tasks
 celery_tasks = {

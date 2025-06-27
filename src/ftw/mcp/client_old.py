@@ -4,7 +4,7 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 import os
 
-from ftw.conf import settings
+from finetune_sdk.conf import settings
 
 # Global variables for managing client state
 worker_mcp_client_thread = None
