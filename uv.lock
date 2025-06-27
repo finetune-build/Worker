@@ -211,6 +211,7 @@ name = "finetune-sdk"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
+    { name = "mcp", extra = ["cli"] },
     { name = "python-dotenv" },
     { name = "watchdog" },
     { name = "websockets" },
@@ -219,6 +220,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.10.0" },
     { name = "python-dotenv" },
     { name = "watchdog" },
     { name = "websockets" },

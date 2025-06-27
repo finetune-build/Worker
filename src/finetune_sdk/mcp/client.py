@@ -3,6 +3,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 import os
 from typing import Any
 from mcp.types import InitializeResult, ClientNotification, InitializedNotification
+from finetune_sdk import settings
 
 async def handle_mcp_request(request: dict[str, Any]) -> Any:
     """
@@ -17,7 +18,7 @@ async def handle_mcp_request(request: dict[str, Any]) -> Any:
     """
     server_params = StdioServerParameters(
         command="python",
-        args=["examples/mcp/worker-integration/weather.py"],
+        args=[settings.MCP_SERVER_PATH],
         env=os.environ,
     )
 

@@ -16,7 +16,13 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
-dependencies = ["aiohttp", "python-dotenv", "watchdog", "websockets"]
+dependencies = [
+    "aiohttp",
+ "mcp[cli]>=1.10.0",
+ "python-dotenv",
+ "watchdog",
+ "websockets",
+]
 
 [project.urls]
 Homepage = "https://github.com/finetune-build/python-sdk"
