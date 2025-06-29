@@ -18,15 +18,24 @@ classifiers = [
 
 dependencies = [
     "aiohttp",
- "mcp[cli]>=1.10.0",
- "python-dotenv",
- "watchdog",
- "websockets",
+    "mcp[cli]>=1.10.0",
+    "supervisor>=4.2.5",
+    "watchdog",
+    "websockets",
 ]
 
 [project.urls]
 Homepage = "https://github.com/finetune-build/python-sdk"
 Issues = "https://github.com/finetune-build/python-sdk/issues"
+
+[project.optional-dependencies]
+cli = [
+    "python-dotenv>=1.1.1",
+    "typer>=0.16.0",
+]
+
+[project.scripts]
+finetune = "finetune_sdk.cli:app [cli]"
 
 [tool.hatch.build]
 sources = ["src"]
