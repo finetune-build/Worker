@@ -15,7 +15,7 @@ except ImportError:
     rprint("❌ [red]typer is required[/red]")
     sys.exit(1)
 
-from finetune.cli import ConfigOption, VerboseOption
+from finetune.cli import console, ConfigOption, VerboseOption
 
 def register_stop(app):
     @app.command()

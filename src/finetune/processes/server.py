@@ -15,8 +15,8 @@ class ServerProcess(BaseProcess):
     
     def setup_subscriptions(self):
         """Setup Redis subscriptions."""
-        # self.pubsub = self.redis_client.get_pubsub()
-        # self.pubsub.subscribe(['commands'])
+        self.pubsub = self.redis_client.get_pubsub()
+        self.pubsub.subscribe(['commands'])
         self.logger.info("Subscribed to commands channel")
     
     def handle_alert(self, command_data: Dict[str, Any]):
@@ -36,7 +36,7 @@ class ServerProcess(BaseProcess):
             'status': 'active'
         }
         
-        # self.redis_client.lpush('alerts', alert_record)
+        self.redis_client.lpush('alerts', alert_record)
         
         # Publish response
         response = {
@@ -45,7 +45,7 @@ class ServerProcess(BaseProcess):
             'status': 'processed',
             'source': self.name
         }
-        # self.redis_client.publish('responses', response)
+        self.redis_client.publish('responses', response)
     
     def process_command(self, command_data: Dict[str, Any]):
         """Process incoming commands."""
@@ -66,8 +66,8 @@ class ServerProcess(BaseProcess):
             'source': self.name
         }
         
-        # self.redis_client.set('server_status', status)
-        # self.redis_client.publish('status', status)
+        self.redis_client.set('server_status', status)
+        self.redis_client.publish('status', status)
     
     def run(self):
         """Main server loop."""

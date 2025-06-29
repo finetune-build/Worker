@@ -13,8 +13,8 @@ class ClientProcess(BaseProcess):
     
     def setup_subscriptions(self):
         """Setup Redis subscriptions."""
-        # self.pubsub = self.redis_client.get_pubsub()
-        # self.pubsub.subscribe(['events', 'commands'])
+        self.pubsub = self.redis_client.get_pubsub()
+        self.pubsub.subscribe(['events', 'commands'])
         self.logger.info("Subscribed to events and commands channels")
     
     def process_event(self, event_data: Dict[str, Any]):
@@ -32,7 +32,7 @@ class ClientProcess(BaseProcess):
                 'event_id': event_id,
                 'source': self.name
             }
-            # self.redis_client.publish('commands', command)
+            self.redis_client.publish('commands', command)
             self.logger.info(f"Sent alert command for event {event_id}")
     
     def process_message(self, message: Dict[str, Any]):

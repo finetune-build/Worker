@@ -25,10 +25,10 @@ class EventListenerProcess(BaseProcess):
     def publish_event(self, event_data: Dict[str, Any]):
         """Publish event to Redis."""
         # Publish to events channel
-        # self.redis_client.publish('events', event_data)
+        self.redis_client.publish('events', event_data)
         
         # Store latest event
-        # self.redis_client.set('latest_event', event_data)
+        self.redis_client.set('latest_event', event_data)
         
         self.logger.info(f"Published event {event_data['event_id']}: {event_data['value']}")
     

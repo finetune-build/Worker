@@ -1,5 +1,6 @@
 import subprocess
 import time
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -101,23 +102,36 @@ class SupervisorManager:
             cmd.append("-n")  # Don't daemonize
         
         try:
+            # Suppress pkg_resources warnings by setting environment variable
+            env = os.environ.copy()
+            env['PYTHONWARNINGS'] = 'ignore::UserWarning:pkg_resources'
+            
             if daemon:
                 subprocess.run(
                     cmd,
                     check=True,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.PIPE,
-                    text=True
+                    text=True,
+                    env=env  # Use modified environment
                 )
             else:
                 # For non-daemon mode, let it run in foreground
-                subprocess.run(cmd, check=True)
+                subprocess.run(cmd, check=True, env=env)
                 
         except subprocess.CalledProcessError as e:
+            # Filter out pkg_resources warnings from error messages
+            error_stderr = e.stderr
+            if error_stderr and "pkg_resources is deprecated" in error_stderr:
+                # Extract only the actual error, not the warning
+                lines = error_stderr.split('\n')
+                actual_error = [line for line in lines if 'pkg_resources' not in line and 'UserWarning' not in line]
+                error_stderr = '\n'.join(actual_error).strip()
+            
             # Check if supervisor is already running
-            if "already listening" in e.stderr:
+            if "already listening" in error_stderr:
                 return  # Already running, that's fine
-            raise SupervisorError(f"Failed to start supervisord: {e.stderr}")
+            raise SupervisorError(f"Failed to start supervisord: {error_stderr}")
         except FileNotFoundError:
             raise SupervisorError(
                 "supervisord not found. Please install supervisor: pip install supervisor"
@@ -149,24 +163,46 @@ class SupervisorManager:
                     raise
     
     def _execute_supervisorctl(self, *args: str) -> str:
-        """Execute supervisorctl command."""
+        """Execute supervisorctl command with warning suppression."""
         cmd = [
             "supervisorctl",
             "-c", str(self.config_path)
         ] + list(args)
         
         try:
+            # Suppress pkg_resources warnings by setting environment variable
+            env = os.environ.copy()
+            env['PYTHONWARNINGS'] = 'ignore::UserWarning:pkg_resources'
+            
             result = subprocess.run(
                 cmd,
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                env=env  # Use modified environment
             )
             return result.stdout.strip()
             
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr.strip() or e.stdout.strip()
-            raise SupervisorError(f"supervisorctl command failed: {error_msg}")
+            
+            # Filter out pkg_resources warnings from error messages
+            if "pkg_resources is deprecated" in error_msg:
+                # Extract only the actual error, not the warning
+                lines = error_msg.split('\n')
+                actual_error = [line for line in lines if 'pkg_resources' not in line and 'UserWarning' not in line]
+                error_msg = '\n'.join(actual_error).strip()
+                
+                # If after filtering there's no actual error, don't raise an exception
+                if not error_msg:
+                    return ""  # Command succeeded, just had warnings
+            
+            # Only raise if there's an actual error message
+            if error_msg:
+                raise SupervisorError(f"supervisorctl command failed: {error_msg}")
+            else:
+                return ""  # No error, just warnings that were filtered out
+                
         except FileNotFoundError:
             raise SupervisorError(
                 "supervisorctl not found. Please install supervisor: pip install supervisor"

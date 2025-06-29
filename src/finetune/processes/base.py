@@ -1,18 +1,21 @@
 """Base process class for all supervisor processes."""
 
 import logging
+import time
+
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any
 
 from finetune.config import Config
 from finetune.utils.logging import setup_logging
-# from finetune.utils.redis_client import RedisClient
+from finetune.utils.redis_client import RedisClient
 from finetune.utils.signals import SignalHandler
 
 
 class BaseProcess(ABC):
     """Base class for all processes."""
-    
+
     def __init__(self, config: Config = None, name: str = None):
         self.config = config or Config()
         self.name = name or self.__class__.__name__
@@ -20,13 +23,25 @@ class BaseProcess(ABC):
         self.running = True
         
         # Setup logging
-        setup_logging(self.name)
+        setup_logging(self.name, log_dir=Path(self.config.log_dir))
         
-        # Setup Redis client
-        # self.redis_client = RedisClient(self.config.redis)
+        # DON'T connect to Redis in __init__, do it lazily
+        self._redis_client = None
         
         # Setup signal handling
         self.signal_handler = SignalHandler(self._shutdown)
+    
+    @property
+    def redis_client(self):
+        """Lazy Redis client initialization."""
+        if self._redis_client is None:
+            try:
+                self._redis_client = RedisClient(self.config.redis)
+            except Exception as e:
+                self.logger.error(f"Failed to connect to Redis: {e}")
+                # Return a mock client or handle gracefully
+                raise
+        return self._redis_client 
         
     def _shutdown(self, signum: int, frame: Any):
         """Handle shutdown signals."""
