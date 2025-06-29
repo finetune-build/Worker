@@ -1,5 +1,5 @@
 from mcp.server.fastmcp import FastMCP
-from finetune_sdk.sse.lifespan import create_lifespan
+from finetune.sse.lifespan import create_lifespan
 
 # Initialize FastMCP server
 mcp = FastMCP("worker-integration", lifespan=create_lifespan())

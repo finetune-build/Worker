@@ -2,7 +2,7 @@ import httpx
 
 from typing import Any
 from mcp.server.fastmcp import FastMCP
-from finetune_sdk.sse.lifespan import create_lifespan
+from finetune.sse.lifespan import create_lifespan
 
 # Initialize FastMCP server
 mcp = FastMCP("authentication", lifespan=create_lifespan())

@@ -19,7 +19,7 @@ classifiers = [
 dependencies = [
     "aiohttp",
     "mcp[cli]>=1.10.0",
-    "supervisor>=4.2.5",
+    "pydantic>=2.11.7",
     "watchdog",
     "websockets",
 ]
@@ -31,11 +31,18 @@ Issues = "https://github.com/finetune-build/python-sdk/issues"
 [project.optional-dependencies]
 cli = [
     "python-dotenv>=1.1.1",
+    "rich>=14.0.0",
     "typer>=0.16.0",
+    "typing-extensions>=4.14.0",
+]
+supervisor = [
+    "jinja2>=3.1.6",
+    "setuptools<81",
+    "supervisor>=4.2.5",
 ]
 
 [project.scripts]
-finetune = "finetune_sdk.cli:app [cli]"
+finetune = "finetune.cli:app [cli]"
 
 [tool.hatch.build]
 sources = ["src"]
@@ -53,7 +60,7 @@ include = [
 ]
 
 [tool.hatch.version]
-path = "src/finetune_sdk/__init__.py"  # or another version file
+path = "src/finetune/__init__.py"  # or another version file
 
 [tool.black]
 line-length = 88
