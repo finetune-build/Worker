@@ -5,7 +5,6 @@ import threading
 import websockets
 import time
 
-from finetune.agent.registry import AGENT_REGISTRY
 from finetune.conf import settings
 
 # Global dictionary to track active threads by conversation_id

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -92,10 +92,10 @@ class Config(BaseModel):
             python_path = f"python -m {self.app_name}.processes"
             
             self.processes = {
-                "event_listener": ProcessConfig(
-                    command=f"{python_path}.event_listener",
-                    stdout_logfile=f"{self.log_dir}/event_listener.out.log",
-                    stderr_logfile=f"{self.log_dir}/event_listener.err.log",
+                "events": ProcessConfig(
+                    command=f"{python_path}.events",
+                    stdout_logfile=f"{self.log_dir}/events.out.log",
+                    stderr_logfile=f"{self.log_dir}/events.err.log",
                 ),
                 "client": ProcessConfig(
                     command=f"{python_path}.client",

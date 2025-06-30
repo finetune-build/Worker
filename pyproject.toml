@@ -8,7 +8,7 @@ dynamic = ["version"]
 authors = [
   { name = "Peter Pak", email = "ppak10@gmail.com" },
 ]
-description = "Python worker client for communicating with finetune.build's API"
+description = "Python Software Development Kit for finetune.build"
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
@@ -17,9 +17,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "aiohttp",
-    "mcp[cli]>=1.10.0",
-    "pydantic>=2.11.7",
     "watchdog",
     "websockets",
 ]
@@ -37,9 +34,16 @@ cli = [
 ]
 supervisor = [
     "jinja2>=3.1.6",
+    "pydantic>=2.11.7",
     "redis>=6.2.0",
     "setuptools<81",
     "supervisor>=4.2.5",
+]
+mcp = [
+    "mcp[cli]>=1.10.0",
+]
+events = [
+    "aiohttp>=3.12.13",
 ]
 
 [project.scripts]
@@ -66,11 +70,3 @@ path = "src/finetune/__init__.py"  # or another version file
 [tool.black]
 line-length = 88
 target-version = ["py39"]
-
-[tool.uv.workspace]
-members = [
-    "examples/weather",
-    "examples/mcp/mcp-server-demo",
-    "examples/mcp/worker-integration",
-    "examples/mcp/authentication",
-]

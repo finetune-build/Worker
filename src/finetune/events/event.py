@@ -1,5 +1,4 @@
 from finetune.api.worker import worker_pong
-
 from finetune.conf import settings
 from finetune.ws.conversation import start_conversation_thread, shutdown_conversation_thread
 from finetune.ws.worker import worker_start_websocket_thread

@@ -2,9 +2,9 @@ import asyncio
 import aiohttp
 from typing import Any
 from finetune.processes.base import BaseProcess
-from finetune.event_listener import EventListener, handle_event
+from finetune.events import EventListener, handle_event
 
-class EventListenerProcess(BaseProcess):
+class EventsProcess(BaseProcess):
     """Process that listens for events via SSE."""
     
     def __init__(self, *args, **kwargs):
@@ -128,7 +128,7 @@ class EventListenerProcess(BaseProcess):
 
 def main():
     """Entry point for running as module."""
-    process = EventListenerProcess(name="event_listener")
+    process = EventsProcess(name="events")
     process.start()
 
 
