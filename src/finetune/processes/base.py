@@ -1,7 +1,6 @@
 """Base process class for all supervisor processes."""
 
 import logging
-import time
 
 from abc import ABC, abstractmethod
 from pathlib import Path

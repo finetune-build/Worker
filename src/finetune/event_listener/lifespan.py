@@ -1,3 +1,4 @@
+# Old lifespan script to inject into server lifecycle
 import asyncio
 from contextlib import asynccontextmanager
 

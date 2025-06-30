@@ -1,8 +1,6 @@
 from finetune.api.worker import worker_pong
 
 from finetune.conf import settings
-# from finetune.sse.tasks import run_task_by_name
-# from finetune.sse.utils import * # Applies prepended print statement.
 from finetune.ws.conversation import start_conversation_thread, shutdown_conversation_thread
 from finetune.ws.worker import worker_start_websocket_thread
 from finetune.mcp.client import run_mcp_request 
@@ -35,16 +33,6 @@ async def handle_event(data):
             "result": "MCP request processed",
             "id": request_id,
         }
-
-    # elif method == "tool":
-    #     tool_name = params.get("tool_name")
-    #     run_task_by_name(tool_name)
-    #     print(f"Tool request received. Running tool: {tool_name}")
-    #     return {
-    #         "jsonrpc": "2.0",
-    #         "result": f"Tool {tool_name} executed",
-    #         "id": request_id,
-    #     }
 
     elif method == "worker_task_created":
         print(f"Received Worker Task")
