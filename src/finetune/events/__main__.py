@@ -1,13 +1,16 @@
 import aiohttp
 import asyncio
 import json
-from typing import Callable
+
+from finetune.api.worker import worker_pong
 from finetune.conf import settings
+from finetune.ws.conversation import start_conversation_thread, shutdown_conversation_thread
+from finetune.ws.worker import worker_start_websocket_thread
 
-
+from finetune.utils.redis_client import RedisClient 
 class EventListener:
-    def __init__(self, on_event: Callable):
-        self.on_event = on_event
+    def __init__(self, redis_client: RedisClient = None):
+        self.redis_client = redis_client 
         self.session = None
         self._stop_event = asyncio.Event()
         self.url = f"https://{settings.DJANGO_HOST}/v1/worker/{settings.WORKER_ID}/sse/"
@@ -56,6 +59,101 @@ class EventListener:
         finally:
             # Always clean up session
             await self.session.close()
+
+    async def on_event(self, data):
+        """
+        Handle JSON-RPC 2.0 formatted requests.
+        """
+        method = data.get("method")
+        params = data.get("params", {})
+        request_id = data.get("id")
+    
+        if method == "worker_ping" or method == "worker_ping_all_active":
+            print("Worker Ping Received. Sending pong...")
+            await worker_pong()
+            return {
+                "jsonrpc": "2.0",
+                "result": "pong",
+                "id": request_id,
+            }
+    
+        elif method == "worker_mcp_request":
+            print("Recieved worker MCP request event")
+            if self.redis_client is None:
+                return {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32601,
+                        "message": f"Event listener pubsub not initialized"
+                    },
+                    "id": request_id,
+                }
+            else:
+                # response = await run_mcp_request(params)
+                # print(f"response: {response}")
+                # await worker_mcp_response(response)
+                print(f"params: {params}")
+                self.redis_client.publish('events', params)
+                return {
+                    "jsonrpc": "2.0",
+                    "result": "MCP request processed",
+                    "id": request_id,
+                }
+    
+        elif method == "worker_task_created":
+            print(f"Received Worker Task")
+            return {
+                "jsonrpc": "2.0",
+                "result": f"Worker {settings.WORKER_ID} received task",
+                "id": request_id,
+            }
+    
+        elif method == "worker_start_websocket_thread":
+            # Occurs when user visits worker page on web.
+            # Worker also automatically opens websocket on initial synchronization
+            # if there are any tasks.
+            print(f"Starting Worker Websocket Thread: {settings.WORKER_ID}")
+            worker_start_websocket_thread(settings.WORKER_ID)
+            return {
+                "jsonrpc": "2.0",
+                "result": f"Worker {settings.WORKER_ID} websocket opened",
+                "id": request_id,
+            }
+    
+        elif method == "conversation_open_websocket":
+            content = params.get("content")
+            conversation_id = params.get("conversation_id")
+            print(f"Starting Conversation Websocket Thread: {conversation_id}")
+            start_conversation_thread(conversation_id, content)
+            return {
+                "jsonrpc": "2.0",
+                "result": f"Conversation {conversation_id} websocket opened",
+                "id": request_id,
+            }
+    
+        # Not really used because conversation is closed from within websocket.
+        elif method == "conversation_close_websocket":
+            conversation_id = params.get("conversation_id")
+            print("Closing WebSocket connection for conversation in a thread...")
+            shutdown_conversation_thread(conversation_id)
+            return {
+                "jsonrpc": "2.0",
+                "result": f"Conversation {conversation_id} websocket closed",
+                "id": request_id,
+            }
+    
+        else:
+            print(f"Received unknown method: {method}")
+            return {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32601,
+                    "message": f"Method '{method}' not found"
+                },
+                "id": request_id,
+            }
+
+
     
     async def stop(self):
         """Stop the event listener gracefully."""

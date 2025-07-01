@@ -1,8 +1,7 @@
 import asyncio
 from typing import Any
 from finetune.processes.base import BaseProcess
-from finetune.events import EventListener, handle_event
-
+from finetune.events import EventListener
 
 class EventsProcess(BaseProcess):
     """Process that listens for events via SSE."""
@@ -28,7 +27,7 @@ class EventsProcess(BaseProcess):
                 self.logger.info("Starting event listener...")
                 
                 # Create event listener - it will manage its own session
-                self._event_listener = EventListener(handle_event)
+                self._event_listener = EventListener(self.redis_client)
                 
                 # Run listener until it completes or we're shutting down
                 await self._event_listener.start()
