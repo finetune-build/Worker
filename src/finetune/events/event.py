@@ -2,8 +2,8 @@ from finetune.api.worker import worker_pong
 from finetune.conf import settings
 from finetune.ws.conversation import start_conversation_thread, shutdown_conversation_thread
 from finetune.ws.worker import worker_start_websocket_thread
-from finetune.mcp.client import run_mcp_request 
-from finetune.api.worker import worker_mcp_response
+# from finetune.mcp.client import run_mcp_request 
+# from finetune.api.worker import worker_mcp_response
 
 async def handle_event(data):
     """
@@ -22,16 +22,16 @@ async def handle_event(data):
             "id": request_id,
         }
 
-    elif method == "worker_mcp_request":
-        print("Starting MCP Client")
-        response = await run_mcp_request(params)
-        print(f"response: {response}")
-        await worker_mcp_response(response)
-        return {
-            "jsonrpc": "2.0",
-            "result": "MCP request processed",
-            "id": request_id,
-        }
+    # elif method == "worker_mcp_request":
+    #     print("Starting MCP Client")
+    #     response = await run_mcp_request(params)
+    #     print(f"response: {response}")
+    #     await worker_mcp_response(response)
+    #     return {
+    #         "jsonrpc": "2.0",
+    #         "result": "MCP request processed",
+    #         "id": request_id,
+    #     }
 
     elif method == "worker_task_created":
         print(f"Received Worker Task")
