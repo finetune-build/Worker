@@ -1,47 +1,54 @@
 import asyncio
 from typing import Any
+
 from finetune.processes.base import BaseProcess
-from finetune.events import EventListener
+from finetune.mcp.server import MCPServer
 
-class EventsProcess(BaseProcess):
-    """Process that listens for events via SSE."""
+class MCPServerProcess(BaseProcess):
+    """Process for spinning up MCP server to handle MCP client requests."""
     
-    def __init__(self, channels = ['events'], *args, **kwargs):
+    def __init__(self, server_name: str = "finetune-mcp-server", server_version: str = "1.0.0", *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._event_listener = None
-        self.pubsub = None
-        self.channels = channels
-
-    def setup_subscriptions(self):
-        """Setup Redis subscriptions."""
-        self.pubsub = self.redis_client.get_pubsub()
-        self.pubsub.subscribe(self.channels)
-        self.logger.info("Subscribed to channels: {self.channels}")
+        self._mcp_server = None
+        self.server_name = server_name
+        self.server_version = server_version
     
-    async def run_event_listener(self):
-        """Run the event listener with retry logic."""
+    async def run_mcp_server(self):
+        """Run the MCP server with retry logic."""
         retry_delay = 1  # Start with 1 second
         max_delay = 60   # Maximum 60 seconds between retries
         
         while self.running:
             try:
-                self.logger.info("Starting event listener...")
+                self.logger.info(f"Starting MCP server: {self.server_name} v{self.server_version}")
                 
-                # Create event listener - it will manage its own session
-                self._event_listener = EventListener(self.redis_client)
+                # Create MCP server
+                self._mcp_server = MCPServer(
+                    name=self.server_name,
+                    version=self.server_version
+                )
                 
-                # Run listener until it completes or we're shutting down
-                await self._event_listener.start()
+                # Start the server (this will block until stopped)
+                await self._mcp_server.start()
                 
-                # If we get here, the connection closed
+                # If we get here, the server stopped
                 if self.running:
-                    self.logger.warning("Event listener connection closed")
+                    self.logger.warning("MCP server stopped unexpectedly")
                 
             except asyncio.CancelledError:
-                self.logger.info("Event listener cancelled")
+                self.logger.info("MCP server cancelled")
                 break
             except Exception as e:
-                self.logger.error(f"An error occurred: {str(e)}")
+                self.logger.error(f"MCP server error: {e}")
+            
+            finally:
+                # Stop the server if it's running
+                if self._mcp_server:
+                    try:
+                        await self._mcp_server.stop()
+                    except Exception as e:
+                        self.logger.error(f"Error stopping MCP server: {e}")
+                    self._mcp_server = None
             
             # Only retry if we're still supposed to be running
             if self.running:
@@ -58,31 +65,32 @@ class EventsProcess(BaseProcess):
                 
                 # Exponential backoff
                 retry_delay = min(retry_delay * 2, max_delay)
-                
-        self.logger.info("Event listener stopped")
+            else:
+                # Clean shutdown requested
+                break
+        
+        self.logger.info("MCP server stopped")
     
     def run(self):
-        """Main process loop - runs the async event listener."""
-        self.setup_subscriptions()
-
+        """Main process loop - runs the async MCP server."""
         try:
             # Use asyncio.run for cleaner event loop management
-            asyncio.run(self.run_event_listener())
+            asyncio.run(self.run_mcp_server())
         except Exception as e:
-            self.logger.error(f"Event listener process error: {e}")
+            self.logger.error(f"MCP server process error: {e}")
     
     def _shutdown(self, signum: int, frame: Any):
         """Handle shutdown signals."""
         self.logger.info(f"Received signal {signum}, shutting down...")
         self.running = False
         
-        # Stop the event listener if it's running
-        if self._event_listener:
+        # Stop the MCP server if it's running
+        if self._mcp_server:
             # Schedule the stop coroutine in the event loop
             try:
                 loop = asyncio.get_running_loop()
                 asyncio.run_coroutine_threadsafe(
-                    self._event_listener.stop(),
+                    self._mcp_server.stop(),
                     loop
                 )
             except RuntimeError:
@@ -91,18 +99,15 @@ class EventsProcess(BaseProcess):
     
     def cleanup(self):
         """Clean up resources when shutting down."""
-        if self.pubsub:
-            self.pubsub.close()
-
-        self.logger.info("Cleaning up event listener...")
+        self.logger.info("Cleaning up MCP server...")
         
-        # Parent cleanup handles redis client
+        # Parent cleanup handles any base resources
         super().cleanup()
 
 
 def main():
     """Entry point for running as module."""
-    process = EventsProcess(name="events")
+    process = MCPServerProcess(name="mcp_server")
     process.start()
 
 

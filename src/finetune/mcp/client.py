@@ -1,49 +1,79 @@
 import asyncio
 import os
+
 from typing import Callable, Any, Optional
-from mcp.client.session import ClientSession
-from mcp.client.stdio import StdioServerParameters, stdio_client
+
 from finetune import settings
 
+from mcp.client.session import ClientSession
+from mcp.client.stdio import StdioServerParameters, stdio_client
+
 class MCPClient:
-    def __init__(self, on_event: Callable):
-        self.on_event = on_event
-        self.session: Optional[ClientSession] = None
+    def __init__(self, on_event: Optional[Callable[[dict], Any]] = None):
+        self.session = None
         self._stop_event = asyncio.Event()
         self._read_stream = None
         self._write_stream = None
         self._session_task = None
+        self.on_event = on_event or self._default_event_handler
         
         # Server parameters for stdio connection
         self.server_params = StdioServerParameters(
             command="python",
-            args=[settings.MCP_SERVER_PATH],
-            env=os.environ,
+            # args=[settings.MCP_SERVER_PATH],
+            # env=os.environ,
         )
-    
+
+    async def _default_event_handler(self, event: dict):
+        """Default event handler that just logs the event."""
+        print(f"[MCP] Event: {event}")
+
     async def start(self):
-        """
-        Opens connection with MCP server and starts listening for requests.
-        """
+        """Start the MCP client and wait for it to finish."""
+        if hasattr(self, '_client_task') and not self._client_task.done():
+            raise RuntimeError("Client is already running")
+
+        print(f"[MCP] Starting client...")
+        self._client_task = asyncio.create_task(self._run_client())
+        
+        # Wait for the client to finish (this will block until stopped)
+        await self._client_task
+
+    async def start_background(self):
+        """Start the MCP client in the background (non-blocking)."""
+        if hasattr(self, '_client_task') and not self._client_task.done():
+            raise RuntimeError("Client is already running")
+
+        print(f"[MCP] Starting client in background...")
+        self._client_task = asyncio.create_task(self._run_client())
+
+    async def _run_client(self):
+        """Internal method that runs the entire client lifecycle."""
         try:
-            # Create stdio connection
-            self._read_stream, self._write_stream = await stdio_client(self.server_params).__aenter__()
-            
-            # Create MCP session
-            self.session = ClientSession(self._read_stream, self._write_stream)
-            
-            # Initialize the session
-            print("[MCP] Initializing session...")
-            await self.session.initialize()
-            print(f"[MCP] Connected to MCP server")
-            
-            # Start the event loop to handle incoming notifications
-            self._session_task = asyncio.create_task(self._handle_notifications())
-            
-        except Exception as e:
-            print(f"[MCP] Error starting client: {e}")
-            await self.stop()
+            print(f"[MCP] Current working directory: {os.getcwd()}")
+
+            async with stdio_client(self.server_params) as (read_stream, write_stream):
+                # Create MCP session
+                self.session = ClientSession(read_stream, write_stream)
+
+                # Initialize the session
+                print("[MCP] Initializing session...")
+                await self.session.initialize()
+                print(f"[MCP] Connected to MCP server")
+
+                # Run until stopped
+                await self._handle_notifications()
+
+        except asyncio.CancelledError:
+            print("[MCP] Client cancelled")
             raise
+        except Exception as e:
+            print(f"[MCP] Error in client: {e}")
+            raise
+        finally:
+            print("[MCP] Client stopped")
+            self.session = None
+
     
     async def _handle_notifications(self):
         """
@@ -172,60 +202,20 @@ class MCPClient:
     
     async def stop(self):
         """Stop the MCP client gracefully."""
+        if not hasattr(self, '_client_task'):
+            return
+        
+        print("[MCP] Stopping client...")
         self._stop_event.set()
         
-        # Cancel the notification handler task
-        if self._session_task and not self._session_task.done():
-            self._session_task.cancel()
+        # Cancel the main client task
+        if not self._client_task.done():
+            self._client_task.cancel()
             try:
-                await self._session_task
+                await self._client_task
             except asyncio.CancelledError:
                 pass
-        
-        # Close the session
-        if self.session:
-            await self.session.__aexit__(None, None, None)
-            self.session = None
-        
-        # Close the stdio connection
-        if self._read_stream and self._write_stream:
-            await stdio_client(self.server_params).__aexit__(None, None, None)
-            self._read_stream = None
-            self._write_stream = None
-        
-        print("[MCP] Client stopped")
     
     def is_running(self) -> bool:
         """Check if the client is still running."""
         return not self._stop_event.is_set() and self.session is not None
-
-
-# Example usage:
-async def main():
-    async def handle_mcp_event(event):
-        print(f"Received MCP event: {event}")
-    
-    client = MCPClient(on_event=handle_mcp_event)
-    
-    try:
-        # Start the client
-        await client.start()
-        
-        # Example: send a request
-        request = {
-            "method": "tools/list",
-            "params": {},
-            "id": 1
-        }
-        response = await client.handle_request(request)
-        
-        # Keep running for a while
-        await asyncio.sleep(10)
-        
-    finally:
-        # Stop the client
-        await client.stop()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

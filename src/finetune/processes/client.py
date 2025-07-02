@@ -19,6 +19,7 @@ class ClientProcess(BaseProcess):
     
     def process_event(self, event_data: Dict[str, Any]):
         """Process incoming events."""
+        print(f"event_data: {event_data}")
         event_id = event_data.get('event_id')
         value = event_data.get('value', 0)
         

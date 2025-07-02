@@ -97,20 +97,25 @@ class Config(BaseModel):
                     stdout_logfile=f"{self.log_dir}/events.out.log",
                     stderr_logfile=f"{self.log_dir}/events.err.log",
                 ),
-                "client": ProcessConfig(
-                    command=f"{python_path}.client",
-                    stdout_logfile=f"{self.log_dir}/client.out.log",
-                    stderr_logfile=f"{self.log_dir}/client.err.log",
-                ),
-                # "mcp_client": ProcessConfig(
-                #     command=f"{python_path}.mcp_client",
-                #     stdout_logfile=f"{self.log_dir}/mcp_client.out.log",
-                #     stderr_logfile=f"{self.log_dir}/mcp_client.err.log",
+                # "client": ProcessConfig(
+                #     command=f"{python_path}.client",
+                #     stdout_logfile=f"{self.log_dir}/client.out.log",
+                #     stderr_logfile=f"{self.log_dir}/client.err.log",
                 # ),
-                "server": ProcessConfig(
-                    command=f"{python_path}.server",
-                    stdout_logfile=f"{self.log_dir}/server.out.log",
-                    stderr_logfile=f"{self.log_dir}/server.err.log",
+                "mcp_client": ProcessConfig(
+                    command=f"{python_path}.mcp_client",
+                    stdout_logfile=f"{self.log_dir}/mcp_client.out.log",
+                    stderr_logfile=f"{self.log_dir}/mcp_client.err.log",
+                ),
+                # "server": ProcessConfig(
+                #     command=f"{python_path}.server",
+                #     stdout_logfile=f"{self.log_dir}/server.out.log",
+                #     stderr_logfile=f"{self.log_dir}/server.err.log",
+                # ),
+                "mcp_server": ProcessConfig(
+                    command=f"{python_path}.mcp_server",
+                    stdout_logfile=f"{self.log_dir}/mcp_server.out.log",
+                    stderr_logfile=f"{self.log_dir}/mcp_server.err.log",
                 ),
             }
         

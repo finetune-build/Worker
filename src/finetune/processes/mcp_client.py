@@ -1,101 +1,73 @@
 import asyncio
-import json
-from typing import Any, Dict
-from finetune.processes.base import BaseProcess
-from finetune.mcp import MCPClient  # Assuming you put MCPClient in a module
+from typing import Any
 
+from finetune.processes.base import BaseProcess
+from finetune.mcp import MCPClient
 
 class MCPClientProcess(BaseProcess):
     """Process for spinning up MCP client to communicate with MCP server."""
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, channels = ['events'], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._mcp_client = None
         self.pubsub = None
-        self._request_queue = asyncio.Queue()
-        self._response_channel = 'mcp_responses'
-        self._request_channel = 'mcp_requests'
+        self.channels = channels
     
     def setup_subscriptions(self):
         """Setup Redis subscriptions."""
         self.pubsub = self.redis_client.get_pubsub()
-        self.pubsub.subscribe([self._request_channel])
-        self.logger.info(f"Subscribed to {self._request_channel} channel")
+        self.pubsub.subscribe(self.channels)
+        self.logger.info(f"Subscribed to channels: {self.channels}")
     
-    async def handle_mcp_response(self, response: Dict[str, Any]):
-        """Handle responses from MCP server."""
-        try:
-            # Publish response back to Redis
-            self.redis_client.publish(self._response_channel, response)
-            self.logger.info(f"Published MCP response: {response.get('id')}")
-        except Exception as e:
-            self.logger.error(f"Error publishing MCP response: {e}")
+    async def handle_mcp_event(self, event: dict):
+        """Handle events from the MCP client."""
+        self.logger.info(f"Received MCP event: {event}")
+        # Add your event handling logic here
     
     async def process_redis_messages(self):
-        """Process incoming Redis messages and queue them for MCP."""
-        while self.running:
-            try:
-                # Get message with timeout
-                message = self.pubsub.get_message(timeout=0.1)
-                
+        """Process incoming Redis messages."""
+        try:
+            while self.running:
+                # Check for Redis messages with timeout
+                message = self.pubsub.get_message(timeout=1.0)
                 if message and message['type'] == 'message':
-                    channel = message.get('channel', b'').decode('utf-8')
-                    data = message.get('data')
-                    
-                    if channel == self._request_channel and data:
-                        try:
-                            # Parse the request
-                            if isinstance(data, bytes):
-                                data = data.decode('utf-8')
-                            request = json.loads(data) if isinstance(data, str) else data
-                            
-                            # Add to queue for processing
-                            await self._request_queue.put(request)
-                            self.logger.info(f"Queued MCP request: {request.get('method')}")
-                            
-                        except json.JSONDecodeError as e:
-                            self.logger.error(f"Invalid JSON in request: {e}")
-                        except Exception as e:
-                            self.logger.error(f"Error processing Redis message: {e}")
+                    try:
+                        # Process the message
+                        self.logger.info(f"Processing Redis message: {message}")
+                        # Add your Redis message processing logic here
+
+                        data = message["data"]
+                        if isinstance(data, dict) and data.get("jsonrpc") == '2.0':
+                            await self.mcp_client_handle_request(data)
+                        
+                    except Exception as e:
+                        self.logger.error(f"Error processing Redis message: {e}")
                 
-                await asyncio.sleep(0.01)  # Small delay to prevent busy loop
+                # Small delay to prevent busy loop
+                await asyncio.sleep(0.01)
                 
-            except Exception as e:
-                self.logger.error(f"Error in Redis message loop: {e}")
-                await asyncio.sleep(1)
+        except Exception as e:
+            self.logger.error(f"Error in Redis message processor: {e}")
+
+    async def mcp_client_handle_request(self, data):
+        try:
+            response = await self._mcp_client.handle_request(data)
+            self.logger.info(f"MCP Client Response: {response}")
+        except Exception as e:
+            self.logger.error(f"Error routing message to MCP: {e}")
     
     async def process_mcp_requests(self):
-        """Process queued MCP requests."""
-        while self.running:
-            try:
-                # Wait for request with timeout
-                request = await asyncio.wait_for(
-                    self._request_queue.get(), 
-                    timeout=1.0
-                )
+        """Process MCP requests."""
+        try:
+            while self.running and self._mcp_client and self._mcp_client.is_running():
+                # Example: process any queued MCP requests
+                # This is where you'd handle incoming requests to your MCP client
                 
-                if self._mcp_client and self._mcp_client.is_running():
-                    # Send request to MCP server
-                    await self._mcp_client.handle_request(request)
-                else:
-                    self.logger.warning("MCP client not running, dropping request")
-                    
-                    # Send error response
-                    error_response = {
-                        "jsonrpc": "2.0",
-                        "error": {
-                            "code": -32603,
-                            "message": "MCP client not connected"
-                        },
-                        "id": request.get("id")
-                    }
-                    await self.handle_mcp_response(error_response)
-                    
-            except asyncio.TimeoutError:
-                # Normal timeout, continue
-                pass
-            except Exception as e:
-                self.logger.error(f"Error processing MCP request: {e}")
+                # For now, just check if client is still running
+                await asyncio.sleep(1.0)
+                
+        except Exception as e:
+            self.logger.error(f"Error in MCP request processor: {e}")
     
     async def run_mcp_client(self):
         """Run the MCP client with retry logic."""
@@ -106,14 +78,15 @@ class MCPClientProcess(BaseProcess):
             try:
                 self.logger.info("Starting MCP client...")
                 
-                # Create MCP client
-                self._mcp_client = MCPClient(on_event=self.handle_mcp_response)
+                # Create MCP client with event handler
+                self._mcp_client = MCPClient(on_event=self.handle_mcp_event)
                 
-                # Start the client
-                await self._mcp_client.start()
+                # Start the client in background (non-blocking)
+                await self._mcp_client.start_background()
                 
-                # Run both Redis message processor and MCP request processor
+                # Run message processing concurrently with MCP client
                 await asyncio.gather(
+                    self._mcp_client._client_task,  # Wait for MCP client to finish
                     self.process_redis_messages(),
                     self.process_mcp_requests(),
                     return_exceptions=True
@@ -153,6 +126,9 @@ class MCPClientProcess(BaseProcess):
                 
                 # Exponential backoff
                 retry_delay = min(retry_delay * 2, max_delay)
+            else:
+                # Clean shutdown requested
+                break
         
         self.logger.info("MCP client stopped")
     
