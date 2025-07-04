@@ -102,20 +102,38 @@ class Config(BaseModel):
                 #     stdout_logfile=f"{self.log_dir}/client.out.log",
                 #     stderr_logfile=f"{self.log_dir}/client.err.log",
                 # ),
-                "mcp_client": ProcessConfig(
-                    command=f"{python_path}.mcp_client",
-                    stdout_logfile=f"{self.log_dir}/mcp_client.out.log",
-                    stderr_logfile=f"{self.log_dir}/mcp_client.err.log",
-                ),
+                # "mcp_client": ProcessConfig(
+                #     command=f"{python_path}.mcp_client",
+                #     stdout_logfile=f"{self.log_dir}/mcp_client.out.log",
+                #     stderr_logfile=f"{self.log_dir}/mcp_client.err.log",
+                # ),
                 # "server": ProcessConfig(
                 #     command=f"{python_path}.server",
                 #     stdout_logfile=f"{self.log_dir}/server.out.log",
                 #     stderr_logfile=f"{self.log_dir}/server.err.log",
                 # ),
-                "mcp_server": ProcessConfig(
-                    command=f"{python_path}.mcp_server",
-                    stdout_logfile=f"{self.log_dir}/mcp_server.out.log",
-                    stderr_logfile=f"{self.log_dir}/mcp_server.err.log",
+                # "mcp_server": ProcessConfig(
+                #     command=f"{python_path}.mcp_server",
+                #     stdout_logfile=f"{self.log_dir}/mcp_server.out.log",
+                #     stderr_logfile=f"{self.log_dir}/mcp_server.err.log",
+                # ),
+
+                "mcp_http_client": ProcessConfig(
+                    # Changed: Now runs mcp_http module which looks for server.py by default
+                    command=f"{python_path}.mcp_http_client",
+                    stdout_logfile=f"{self.log_dir}/mcp_http_client.out.log",
+                    stderr_logfile=f"{self.log_dir}/mcp_http_client.err.log",
+                    # Optional: Pass working directory to help find server.py
+                    directory=".",
+                ),
+
+                "mcp_http_server": ProcessConfig(
+                    # Changed: Now runs mcp_http module which looks for server.py by default
+                    command=f"{python_path}.mcp_http_server",
+                    stdout_logfile=f"{self.log_dir}/mcp_http_server.out.log",
+                    stderr_logfile=f"{self.log_dir}/mcp_http_server.err.log",
+                    # Optional: Pass working directory to help find server.py
+                    directory=".",
                 ),
             }
         

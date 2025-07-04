@@ -1,3 +1,3 @@
-from .client import MCPClient
+from .http_client import HTTPClient
 
-__all__ = ["MCPClient"]
+__all__ = ["HTTPClient"]

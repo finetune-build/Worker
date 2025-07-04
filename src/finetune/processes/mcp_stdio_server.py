@@ -2,7 +2,7 @@ import asyncio
 from typing import Any
 
 from finetune.processes.base import BaseProcess
-from finetune.mcp.server import MCPServer
+from finetune.mcp.stdio_server import MCPServer
 
 class MCPServerProcess(BaseProcess):
     """Process for spinning up MCP server to handle MCP client requests."""

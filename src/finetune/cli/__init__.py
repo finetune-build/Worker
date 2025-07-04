@@ -4,6 +4,7 @@ from .__main__ import app, console, ConfigOption, VerboseOption
 
 from .health import register_health
 from .initialize import register_initialize
+from .kill import register_kill
 from .logs import register_logs
 from .restart import register_restart
 from .start import register_start
@@ -13,6 +14,7 @@ from .version import register_version
 
 register_health(app)
 register_initialize(app)
+register_kill(app)
 register_logs(app)
 register_restart(app)
 register_start(app)
