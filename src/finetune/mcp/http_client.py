@@ -1,6 +1,8 @@
 # http_client.py
 import asyncio
 import os
+import logging
+import mcp.types as types
 from typing import Callable, Any, Optional
 
 from mcp.client.session import ClientSession
@@ -14,79 +16,97 @@ class HTTPClient:
         self.session = None
         self._stop_event = asyncio.Event()
         self._client_task = None
+        self.capabilities = None
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     async def start(self):
         """Start and run the MCP client."""
-        print("[MCP] Starting client...")
+        self.logger.info("Starting MCP client...")
         try:
-            print(f"[MCP] Current working directory: {os.getcwd()}")
-            print("[MCP] Attempting to connect to MCP server...")
+            self.logger.debug(f"Current working directory: {os.getcwd()}")
+            self.logger.info("Attempting to connect to MCP server...")
 
-            async with streamablehttp_client("http://127.0.0.1:8000/mcp") as (read_stream, write_stream, _):
-                print("[MCP] Transport connection established")
+            async with streamablehttp_client("http://127.0.0.1:8000/mcp/") as (read_stream, write_stream, _):
+                await asyncio.sleep(0.5)  # Give transport time to initialize
+                self.logger.info("Transport connection established")
+                self.logger.debug(f"Read stream: {read_stream}")
+                self.logger.debug(f"Write stream: {write_stream}")
+                
+                # Test if we can write to the stream
+                try:
+                    # Try to check if the write stream is functional
+                    self.logger.debug("Testing write stream...")
+                    # Don't actually send anything yet, just check the stream
+                    self.logger.debug(f"Write stream type: {type(write_stream)}")
+                    self.logger.debug(f"Write stream attributes: {dir(write_stream)}")
+                except Exception as e:
+                    self.logger.error(f"Error checking write stream: {e}")
 
                 self.session = ClientSession(read_stream, write_stream)
                 await self.session.__aenter__()  # Manually enter async context
 
                 try:
-                    print("[MCP] Initializing session...")
-                    await self.session.initialize()
-                    print("[MCP] Session initialized")
+                    self.logger.info("Initializing session...")
+                    result = await self.session.initialize()
+                    self.logger.info("Session initialized successfully")
+                    self.logger.debug(f"Initialize result: {result}")
+                    if result:
+                        self.capabilities = result.capabilities
 
-                    print("\nListing available tools:")
+                    self.logger.info("Listing available tools...")
                     tools = await self.session.list_tools()
                     for tool in tools.tools:
-                        print(f"  - {tool.name}: {tool.description}")
+                        self.logger.info(f"  Tool: {tool.name} - {tool.description}")
 
-                    print("\nListing available resources:")
+                    self.logger.info("Listing available resources...")
                     resources = await self.session.list_resources()
                     for resource in resources.resources:
-                        print(f"  - {resource.uri}: {resource.name}")
+                        self.logger.info(f"  Resource: {resource.uri} - {resource.name}")
 
-                    print("\nCalling echo tool:")
+                    self.logger.info("Testing echo tool...")
                     echo_result = await self.session.call_tool(
                         "echo",
                         arguments={"message": "Hello from MCP client!"}
                     )
-                    print(f"Echo result: {echo_result.content}")
+                    self.logger.info(f"Echo result: {echo_result.content}")
 
-                    print("\nCalling add tool:")
+                    self.logger.info("Testing add tool...")
                     add_result = await self.session.call_tool(
                         "add",
                         arguments={"a": 5, "b": 3}
                     )
-                    print(f"Add result: {add_result.content}")
+                    self.logger.info(f"Add result: {add_result.content}")
 
-                    print("\nReading server info resource:")
+                    self.logger.info("Reading server info resource...")
                     content, mime_type = await self.session.read_resource("info://server")
-                    print(f"Server info: {content}")
+                    self.logger.info(f"Server info: {content}")
 
                     await self._stop_event.wait()
+                except Exception as e:
+                    self.logger.error(f"Exception during session operation: {type(e).__name__}: {e}", exc_info=True)
 
                 finally:
-                    print("[MCP] Cleaning up session...")
+                    self.logger.info("Cleaning up session...")
                     await self.session.__aexit__(None, None, None)
 
         except Exception as e:
-            import traceback
-            print(f"[MCP] Exception: {type(e).__name__}: {e}")
-            traceback.print_exc()
+            self.logger.error(f"Exception in MCP client: {type(e).__name__}: {e}", exc_info=True)
         finally:
-            print("[MCP] Client stopped")
+            self.logger.info("MCP client stopped")
             self.session = None
 
     async def stop(self):
         """Stop the MCP client gracefully."""
-        print("[MCP] Stopping client...")
+        self.logger.info("Stopping MCP client...")
         self._stop_event.set()
-
 
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
         if not self.session:
+            self.logger.error("Client not connected - cannot handle request")
             raise RuntimeError("Client not connected")
 
         try:
-            print(f"[MCP] Processing request: {request}")
+            self.logger.debug(f"Processing request: {request}")
             result = None
             params = request.get("params", {})
             method = request.get("method")
@@ -94,8 +114,32 @@ class HTTPClient:
             if method == "ping":
                 result = await self.session.send_ping()
                 result = result.model_dump(exclude_none=True)
+            elif method == "server/capabilities":
+                # Custom method to retrieve server capabilities from `result`
+                # obtained during `result = await self.session.initialize()`.
+                result = self.capabilities.model_dump(exclude_none=True)
+            elif method == "completion/complete":
+                # context = params.get("context", None)
+                result = await self.session.complete(
+                    ref=params["ref"],
+                    argument=params["argument"],
+                    # context=context
+                )
+                result = result.model_dump(exclude_none=True)
+            elif method == "resources/subscribe":
+                result = await self.session.subscribe_resource()
+                result = result.model_dump(exclude_none=True)
+            elif method == "resources/unsubscribe":
+                result = await self.session.unsubscribe_resource()
+                result = result.model_dump(exclude_none=True)
+            elif method == "resources/read":
+                result = await self.session.read_resource(uri=params["uri"])
+                result = result.model_dump(exclude_none=True)
             elif method == "resources/list":
                 result = await self.session.list_resources()
+                result = result.model_dump(exclude_none=True)
+            elif method == "resources/templates/list":
+                result = await self.session.list_resource_templates()
                 result = result.model_dump(exclude_none=True)
             elif method == "tools/list":
                 tools = await self.session.list_tools()
@@ -111,13 +155,15 @@ class HTTPClient:
                 raise ValueError(f"Unknown method: {method}")
 
             response = {"jsonrpc": "2.0", "result": result, "id": request.get("id")}
-            print("Received MCP Response")
+            self.logger.debug("Received MCP response successfully")
+            
             if self.redis_client is None:
+                self.logger.error("Redis client not initialized")
                 return {
                     "jsonrpc": "2.0",
                     "error": {
                         "code": -32601,
-                        "message": f"Event listener pubsub not initialized"
+                        "message": "Event listener pubsub not initialized"
                     },
                     "id": None,
                 }
@@ -126,7 +172,7 @@ class HTTPClient:
             return response
 
         except Exception as e:
-            print(f"[MCP] Request error: {e}")
+            self.logger.error(f"Request error: {e}", exc_info=True)
             response = {
                 "jsonrpc": "2.0",
                 "error": {"code": -32603, "message": str(e)},

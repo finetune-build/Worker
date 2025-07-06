@@ -41,7 +41,6 @@ class EventsProcess(BaseProcess):
         while self.running:
             try:
                 message = self.pubsub.get_message(timeout=1.0)
-                print(f"message: {message}")
                 if message and message['type'] == 'message':
                     data = message["data"]
                     channel = message["channel"]
