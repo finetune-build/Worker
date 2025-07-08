@@ -44,6 +44,7 @@ class MCPHTTPClientProcess(BaseProcess):
                     
                     # Check if data is valid jsonrpc
                     if isinstance(data, dict) and data.get("jsonrpc") == '2.0':
+                        # Request data, wraps around actual mcp jsonrpc request.
                         await self.mcp_client_handle_request(data)
                 
                 # Small sleep to prevent tight loop

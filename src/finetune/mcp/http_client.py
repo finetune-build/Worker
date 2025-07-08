@@ -108,8 +108,10 @@ class HTTPClient:
         try:
             self.logger.debug(f"Processing request: {request}")
             result = None
-            params = request.get("params", {})
-            method = request.get("method")
+            correlation_id = request["id"] 
+            request_data = request["params"]
+            params = request_data.get("params", {})
+            method = request_data.get("method")
 
             if method == "ping":
                 result = await self.session.send_ping()
@@ -125,6 +127,12 @@ class HTTPClient:
                     argument=params["argument"],
                     # context=context
                 )
+                result = result.model_dump(exclude_none=True)
+            elif method == "prompts/list":
+                result = await self.session.list_prompts()
+                result = result.model_dump(exclude_none=True)
+            elif method == "prompts/get":
+                result = await self.session.get_prompt(name=params["name"], arguments=params["arguments"] )
                 result = result.model_dump(exclude_none=True)
             elif method == "resources/subscribe":
                 result = await self.session.subscribe_resource()
@@ -156,6 +164,11 @@ class HTTPClient:
 
             response = {"jsonrpc": "2.0", "result": result, "id": request.get("id")}
             self.logger.debug("Received MCP response successfully")
+            wrapped_response = {
+                "jsonrpc": "2.0",
+                "result": response,
+                "id": correlation_id 
+            }
             
             if self.redis_client is None:
                 self.logger.error("Redis client not initialized")
@@ -168,14 +181,14 @@ class HTTPClient:
                     "id": None,
                 }
             else:
-                self.redis_client.publish('mcp_responses', response)
-            return response
+                self.redis_client.publish('mcp_responses', wrapped_response)
+            return wrapped_response
 
         except Exception as e:
             self.logger.error(f"Request error: {e}", exc_info=True)
             response = {
                 "jsonrpc": "2.0",
                 "error": {"code": -32603, "message": str(e)},
-                "id": request.get("id")
+                "id": correlation_id 
             }
             return response

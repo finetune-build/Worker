@@ -1,5 +1,6 @@
 from mcp.server.fastmcp import FastMCP
-from mcp.types import Completion, ResourceTemplateReference
+from mcp.server.fastmcp.prompts import base
+from mcp.types import Completion, ResourceTemplateReference, PromptReference
 
 # Create a stateless MCP server
 mcp = FastMCP(name="SimpleServer", stateless_http=True)
@@ -24,9 +25,23 @@ def add(a: int, b: int) -> int:
 @mcp.completion()
 async def handle_completion(ref, argument, context):
     if isinstance(ref, ResourceTemplateReference):
-        # Return completions based on ref, argument, and context
-        return Completion(values=["option1", "option2"])
+        return Completion(values=["user1", "user2"])
+    if isinstance(ref, PromptReference):
+        return Completion(values=["prompt1", "prompt2"])
     return None
+
+# Prompts
+@mcp.prompt()
+def review_code(code: str) -> str:
+    return f"Please review this code:\n\n{code}"
+
+@mcp.prompt()
+def debug_error(error: str) -> list[base.Message]:
+    return [
+        base.UserMessage("I'm seeing this error:"),
+        base.UserMessage(error),
+        base.AssistantMessage("I'll help debug that. What have you tried so far?"),
+    ]
 
 # Resources 
 @mcp.resource("info://server")

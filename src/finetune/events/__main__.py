@@ -98,7 +98,7 @@ class EventListener:
                 }
             else:
                 print(f"params: {params}")
-                self.redis_client.publish('mcp_requests', params)
+                self.redis_client.publish('mcp_requests', data)
                 return {
                     "jsonrpc": "2.0",
                     "result": "MCP request processed",
@@ -154,9 +154,9 @@ class EventListener:
                 "id": request_id,
             }
     
-    async def send_worker_mcp_response(self, request):
-        print(f"sending response back: {request}")
-        await worker_mcp_response(request)
+    async def send_worker_mcp_response(self, response, correlation_id):
+        print(f"sending response back: {response}")
+        await worker_mcp_response(response, correlation_id)
 
     async def stop(self):
         """Stop the event listener gracefully."""

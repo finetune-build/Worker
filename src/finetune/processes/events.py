@@ -46,9 +46,11 @@ class EventsProcess(BaseProcess):
                     channel = message["channel"]
                     if isinstance(data, dict) and data.get("jsonrpc") == '2.0':
                         # await self.handle_redis_message(data)
+                        correlation_id = data.get("id")
                         print(f"channel: {channel}")
                         if channel == "mcp_responses":
-                            await self._event_listener.send_worker_mcp_response(data)
+                            print(f"response: {data}")
+                            await self._event_listener.send_worker_mcp_response(data, correlation_id)
             except Exception as e:
                 self.logger.error(f"Error in Redis message processor: {e}")
             
