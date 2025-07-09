@@ -150,14 +150,13 @@ class HTTPClient:
                 result = await self.session.list_resource_templates()
                 result = result.model_dump(exclude_none=True)
             elif method == "tools/list":
-                tools = await self.session.list_tools()
-                result = {
-                    "tools": [tool.model_dump(exclude_none=True) for tool in tools.tools]
-                }
+                result = await self.session.list_tools()
+                result = result.model_dump(exclude_none=True)
+                # result = {
+                #     "tools": [tool.model_dump(exclude_none=True) for tool in tools.tools]
+                # }
             elif method == "tools/call":
-                name = params.get("name")
-                args = params.get("args")
-                result = await self.session.call_tool(name, args)
+                result = await self.session.call_tool(name=params["name"], arguments=params["arguments"])
                 result = result.model_dump(exclude_none=True)
             else:
                 raise ValueError(f"Unknown method: {method}")

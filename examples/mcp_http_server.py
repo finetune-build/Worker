@@ -5,21 +5,6 @@ from mcp.types import Completion, ResourceTemplateReference, PromptReference
 # Create a stateless MCP server
 mcp = FastMCP(name="SimpleServer", stateless_http=True)
 
-# Add a simple echo tool
-@mcp.tool(description="Echo a message back")
-def echo(message: str) -> str:
-    """Echo the provided message"""
-    print(f"Echo: {message}")
-    return f"Echo: {message}"
-
-
-# Add a simple math tool
-@mcp.tool(description="Add two numbers")
-def add(a: int, b: int) -> int:
-    """Add two numbers together"""
-    print(a + b)
-    return a + b
-
 # Completion
 # https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/122
 @mcp.completion()
@@ -60,6 +45,19 @@ def get_config() -> str:
 def get_user_profile(user_id: str) -> str:
     """Dynamic user data"""
     return f"Profile data for user {user_id}"
+
+# Tools
+@mcp.tool(description="Echo a message back")
+def echo(message: str) -> str:
+    """Echo the provided message"""
+    print(f"Echo: {message}")
+    return f"Echo: {message}"
+
+@mcp.tool(description="Add two numbers")
+def add(a: int, b: int) -> int:
+    """Add two numbers together"""
+    print(a + b)
+    return a + b
 
 def create_app():
     mcp.run(transport="streamable-http")
